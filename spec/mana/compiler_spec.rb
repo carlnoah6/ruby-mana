@@ -75,19 +75,15 @@ RSpec.describe Mana::Compiler do
 
   describe ".compile" do
     it "wraps a method for lazy compilation" do
-      # Create a test class with a method to compile
       klass = Class.new do
         def square(n)
           ~"return n squared"
         end
       end
 
-      # Stub the LLM to return generated code
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "write_var",
-           input: { "name" => "code", "value" => "def square(n)\n  n * n\nend" } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
-      )
+      # Mock generate to avoid full engine/HTTP stack
+      generated_code = "def square(n)\n  n * n\nend"
+      allow(described_class).to receive(:generate).and_return(generated_code)
 
       described_class.compile(klass, :square)
 
@@ -99,6 +95,10 @@ RSpec.describe Mana::Compiler do
       cache_files = Dir.glob(File.join(cache_dir, "*.rb"))
       expect(cache_files.length).to eq(1)
       expect(File.read(cache_files.first)).to include("n * n")
+
+      # Verify source is accessible
+      key = "#{klass}#square"
+      expect(described_class.registry[key]).to eq(generated_code)
     end
   end
 
