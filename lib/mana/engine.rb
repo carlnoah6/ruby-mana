@@ -180,6 +180,8 @@ module Mana
     def handle_effect(tool_use)
       name = tool_use[:name]
       input = tool_use[:input] || {}
+      # Normalize keys to strings for consistent access
+      input = input.transform_keys(&:to_s) if input.is_a?(Hash)
 
       # Check handler stack first
       handler = self.class.handler_stack.last
@@ -244,13 +246,7 @@ module Mana
 
     def write_local(name, value)
       validate_name!(name)
-      sym = name.to_sym
-      # Use eval only for initial declaration (required for local_variable_set to work
-      # on variables not yet in the binding), but name is validated above.
-      unless @binding.local_variable_defined?(sym)
-        @binding.eval("#{name} = nil") # safe: name validated against VALID_IDENTIFIER
-      end
-      @binding.local_variable_set(sym, value)
+      @binding.local_variable_set(name.to_sym, value)
     end
 
     def serialize_value(val)
