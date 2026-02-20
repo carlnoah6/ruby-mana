@@ -199,7 +199,6 @@ module Mana
           parts << "  #{t[:name]}(#{params}) — #{t[:description]}"
         end
       end
-      end
 
       parts.join("\n")
     end
