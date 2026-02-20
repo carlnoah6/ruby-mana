@@ -46,11 +46,12 @@ module Mana
 
       private
 
-      def walk(node, &block)
+      def walk(node, depth = 0, &block)
+        return if depth > 100
         return unless node.respond_to?(:compact_child_nodes)
 
         block.call(node)
-        node.compact_child_nodes.each { |child| walk(child, &block) }
+        node.compact_child_nodes.each { |child| walk(child, depth + 1, &block) }
       end
 
       def extract_params(def_node)

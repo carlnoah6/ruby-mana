@@ -174,7 +174,11 @@ module Mana
       end
 
       # Discover available functions from caller's source
-      methods = Mana::Introspect.methods_from_file(@caller_path)
+      methods = begin
+        Mana::Introspect.methods_from_file(@caller_path)
+      rescue => _e
+        []
+      end
       unless methods.empty?
         parts << ""
         parts << Mana::Introspect.format_for_prompt(methods)
