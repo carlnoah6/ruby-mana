@@ -106,6 +106,8 @@ module Mana
       messages = [{ role: "user", content: @prompt }]
 
       iterations = 0
+      done_result = nil
+
       loop do
         iterations += 1
         raise MaxIterationsError, "exceeded #{@config.max_iterations} iterations" if iterations > @config.max_iterations
@@ -121,6 +123,7 @@ module Mana
         # Process each tool use
         tool_results = tool_uses.map do |tu|
           result = handle_effect(tu)
+          done_result = tu[:input]["result"] if tu[:name] == "done"
           { type: "tool_result", tool_use_id: tu[:id], content: result.to_s }
         end
 
@@ -128,6 +131,8 @@ module Mana
 
         break if tool_uses.any? { |t| t[:name] == "done" }
       end
+
+      done_result
     end
 
     private
@@ -192,17 +197,20 @@ module Mana
 
       when "read_attr"
         obj = resolve(input["obj"])
+        validate_name!(input["attr"])
         serialize_value(obj.public_send(input["attr"]))
 
       when "write_attr"
         obj = resolve(input["obj"])
+        validate_name!(input["attr"])
         obj.public_send("#{input['attr']}=", input["value"])
         "ok: #{input['obj']}.#{input['attr']} = #{input['value'].inspect}"
 
       when "call_func"
         func = input["name"]
+        validate_name!(func)
         args = input["args"] || []
-        result = @binding.eval("method(:#{func})").call(*args)
+        result = @binding.receiver.method(func.to_sym).call(*args)
         serialize_value(result)
 
       when "done"
@@ -217,18 +225,30 @@ module Mana
 
     # --- Binding Helpers ---
 
+    VALID_IDENTIFIER = /\A[A-Za-z_][A-Za-z0-9_]*\z/
+
+    def validate_name!(name)
+      raise Mana::Error, "invalid identifier: #{name.inspect}" unless name.match?(VALID_IDENTIFIER)
+    end
+
     def resolve(name)
+      validate_name!(name)
       if @binding.local_variable_defined?(name.to_sym)
         @binding.local_variable_get(name.to_sym)
+      elsif @binding.receiver.respond_to?(name.to_sym, true)
+        @binding.receiver.send(name.to_sym)
       else
-        @binding.eval(name.to_s)
+        raise NameError, "undefined variable or method '#{name}'"
       end
     end
 
     def write_local(name, value)
+      validate_name!(name)
       sym = name.to_sym
+      # Use eval only for initial declaration (required for local_variable_set to work
+      # on variables not yet in the binding), but name is validated above.
       unless @binding.local_variable_defined?(sym)
-        @binding.eval("#{name} = nil")
+        @binding.eval("#{name} = nil") # safe: name validated against VALID_IDENTIFIER
       end
       @binding.local_variable_set(sym, value)
     end
@@ -245,11 +265,10 @@ module Mana
         pairs = val.map { |k, v| "#{serialize_value(k)} => #{serialize_value(v)}" }
         "{#{pairs.join(', ')}}"
       else
-        attrs = (val.class.instance_methods(false) - [:inspect, :to_s])
-          .select { |m| val.class.instance_method(m).arity == 0 }
-          .reject { |m| m.to_s.end_with?("=") }
-        obj_repr = attrs.map do |a|
-          "#{a}: #{val.public_send(a).inspect}" rescue nil
+        ivars = val.instance_variables
+        obj_repr = ivars.map do |ivar|
+          attr_name = ivar.to_s.delete_prefix("@")
+          "#{attr_name}: #{val.instance_variable_get(ivar).inspect}" rescue nil
         end.compact.join(", ")
         "#<#{val.class} #{obj_repr}>"
       end

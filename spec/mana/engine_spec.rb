@@ -78,11 +78,15 @@ RSpec.describe Mana::Engine do
           })
         )
 
-      Mana.config.max_iterations = 3
-      x = 1 # rubocop:disable Lint/UselessAssignment
-      b = binding
-      expect { Mana::Engine.run("loop forever on <x>", b) }.to raise_error(Mana::MaxIterationsError)
-      Mana.config.max_iterations = 50
+      orig = Mana.config.max_iterations
+      begin
+        Mana.config.max_iterations = 3
+        x = 1 # rubocop:disable Lint/UselessAssignment
+        b = binding
+        expect { Mana::Engine.run("loop forever on <x>", b) }.to raise_error(Mana::MaxIterationsError)
+      ensure
+        Mana.config.max_iterations = orig
+      end
     end
 
     it "raises on HTTP error" do

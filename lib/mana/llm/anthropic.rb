@@ -10,10 +10,10 @@ module Mana
       API_URL = "https://api.anthropic.com/v1/messages"
       API_VERSION = "2023-06-01"
 
-      def initialize(api_key: nil, model: nil)
-        super()
-        @api_key = api_key || Mana.config.api_key
-        @model = model || Mana.config.model
+      def initialize(config = Mana.config)
+        super(config)
+        @api_key = config.api_key
+        @model = config.model
       end
 
       def chat(system:, messages:, tools:)
@@ -22,21 +22,21 @@ module Mana
         body = {
           model: @model,
           max_tokens: 4096,
-          temperature: Mana.config.temperature,
+          temperature: @config.temperature,
           system: system,
           messages: messages,
           tools: tools
         }
 
         response = post(body)
-        parsed = JSON.parse(response.body)
 
-        if response.code.to_i != 200
-          error_msg = parsed.dig("error", "message") || response.body
+        unless response.is_a?(Net::HTTPSuccess)
+          parsed = JSON.parse(response.body) rescue nil
+          error_msg = parsed&.dig("error", "message") || response.body
           raise Mana::Error, "Anthropic API error (#{response.code}): #{error_msg}"
         end
 
-        # Return content blocks with symbolized keys
+        parsed = JSON.parse(response.body)
         parsed["content"].map { |block| symbolize_keys(block) }
       end
 
@@ -46,6 +46,9 @@ module Mana
         uri = URI(API_URL)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
+        http.open_timeout = 30
+        http.read_timeout = 120
+        http.write_timeout = 30
 
         request = Net::HTTP::Post.new(uri)
         request["x-api-key"] = @api_key

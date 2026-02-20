@@ -14,7 +14,7 @@ puts result  # => 3.0
 
 Mana turns LLM into a Ruby co-processor. Your natural language strings can read and write Ruby variables, call Ruby functions, manipulate objects, and control program flow — all from a single `~"..."`.
 
-This is **not** an LLM API wrapper. This is not prompt formatting. This is LLM woven into your Ruby code as a first-class construct.
+Not an API wrapper. Not prompt formatting. Mana weaves LLM into your Ruby code as a first-class construct.
 
 ## Install
 
