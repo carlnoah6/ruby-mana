@@ -92,6 +92,11 @@ module Mana
       ensure
         handler_stack.pop
       end
+
+      # Built-in tools + any registered custom effects
+      def all_tools
+        TOOLS + Mana::EffectRegistry.tool_definitions
+      end
     end
 
     def initialize(prompt, caller_binding)
@@ -184,6 +189,17 @@ module Mana
         parts << Mana::Introspect.format_for_prompt(methods)
       end
 
+      # List custom effects
+      custom_effects = Mana::EffectRegistry.tool_definitions
+      unless custom_effects.empty?
+        parts << ""
+        parts << "Custom tools available:"
+        custom_effects.each do |t|
+          params = (t[:input_schema][:properties] || {}).keys.join(", ")
+          parts << "  #{t[:name]}(#{params}) — #{t[:description]}"
+        end
+      end
+
       parts.join("\n")
     end
 
@@ -195,9 +211,13 @@ module Mana
       # Normalize keys to strings for consistent access
       input = input.transform_keys(&:to_s) if input.is_a?(Hash)
 
-      # Check handler stack first
+      # Check handler stack first (legacy)
       handler = self.class.handler_stack.last
       return handler.call(name, input) if handler && handler.respond_to?(:call)
+
+      # Check custom effect registry
+      handled, result = Mana::EffectRegistry.handle(name, input)
+      return serialize_value(result) if handled
 
       case name
       when "read_var"
@@ -304,7 +324,7 @@ module Mana
         model: @config.model,
         max_tokens: 4096,
         system: system,
-        tools: TOOLS,
+        tools: self.class.all_tools,
         messages: messages
       }
 

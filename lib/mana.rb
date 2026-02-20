@@ -3,6 +3,7 @@
 require_relative "mana/version"
 require_relative "mana/config"
 require_relative "mana/effects"
+require_relative "mana/effect_registry"
 require_relative "mana/engine"
 require_relative "mana/introspect"
 require_relative "mana/compiler"
@@ -34,6 +35,17 @@ module Mana
 
     def reset!
       @config = Config.new
+      EffectRegistry.clear!
+    end
+
+    # Define a custom effect that becomes an LLM tool
+    def define_effect(name, description: nil, &handler)
+      EffectRegistry.define(name, description: description, &handler)
+    end
+
+    # Remove a custom effect
+    def undefine_effect(name)
+      EffectRegistry.undefine(name)
     end
 
     # View generated source for a mana-compiled method
