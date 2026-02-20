@@ -67,13 +67,14 @@ module Mana
 
       # Generate Ruby method source via LLM
       def generate(method_name, params_desc, prompt)
+        code = nil # pre-declare so binding captures it
         b = binding
         engine_prompt = "Write a Ruby method definition `def #{method_name}(#{params_desc})` that: #{prompt}. " \
                         "Return ONLY the complete method definition (def...end), no explanation. " \
                         "Store the code as a string in <code>"
 
         Mana::Engine.run(engine_prompt, b)
-        b.local_variable_get(:code)
+        code
       end
 
       # Write generated code to a cache file, return the path
