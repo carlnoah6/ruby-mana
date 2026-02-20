@@ -45,6 +45,19 @@
     .ib .d{color:var(--dim);user-select:none}
     footer{border-top:1px solid var(--bd);padding:40px 0;text-align:center;color:var(--dim);font-size:.85rem}
     footer a{color:var(--dim)} footer a:hover{color:var(--tx)}
+    /* Carousel */
+    .carousel{position:relative;width:100%;max-width:620px;display:inline-block;text-align:left}
+    .carousel .slide{display:none;animation:fadeIn .4s ease}
+    .carousel .slide.active{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .carousel-dots{display:flex;justify-content:center;gap:8px;margin-top:16px}
+    .carousel-dots .dot{width:8px;height:8px;border-radius:50%;background:var(--bd);cursor:pointer;transition:background .2s}
+    .carousel-dots .dot.active{background:var(--ac)}
+    .carousel pre{margin:0}
+    /* Install hero */
+    .install-hero{margin-top:32px;margin-bottom:8px}
+    .install-hero code{font-size:1.05rem;color:var(--gr)}
+    .install-hero .d{color:var(--dim);user-select:none}
     @media(max-width:640px){.hero h1{font-size:2.2rem} .grid,.cmp{grid-template-columns:1fr}}
   </style>
 </head>
@@ -75,11 +88,48 @@
     <span class="badge">Anthropic Claude</span>
     <span class="badge">MIT License</span>
   </div>
-  <pre class="hero-code"><span class="kw">require</span> <span class="str">"mana"</span>
 
+  <div class="carousel" id="heroCarousel">
+    <div class="slide active">
+<pre><span class="cmt"># Multilingual semantic computation</span>
 numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
 <span class="ms">~"compute the semantic average of &lt;numbers&gt; and store in &lt;result&gt;"</span>
 puts result  <span class="cmt"># =&gt; 3.0</span></pre>
+    </div>
+    <div class="slide">
+<pre><span class="cmt"># LLM reads and writes Ruby objects directly</span>
+email.subject = <span class="str">"URGENT: Server down"</span>
+<span class="ms">~"read &lt;email&gt; subject, set its category and priority"</span>
+email.category  <span class="cmt"># =&gt; "infrastructure"</span></pre>
+    </div>
+    <div class="slide">
+<pre><span class="cmt"># Define tools the LLM can call</span>
+Mana.define_effect <span class="str">:query_db</span> <span class="kw">do</span> |sql:|
+  DB.execute(sql)
+<span class="kw">end</span>
+<span class="ms">~"find recent orders using query_db, store in &lt;orders&gt;"</span></pre>
+    </div>
+    <div class="slide">
+<pre><span class="cmt"># LLM writes the code, Ruby runs it forever</span>
+<span class="kw">mana def</span> <span class="fn">fizzbuzz</span>(n)
+  <span class="ms">~"return FizzBuzz array from 1 to n"</span>
+<span class="kw">end</span>
+fizzbuzz(<span class="num">15</span>)  <span class="cmt"># generated once → cached → pure Ruby</span></pre>
+    </div>
+    <div class="slide">
+<pre><span class="cmt"># LLM calls your functions automatically</span>
+<span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
+  { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol]
+<span class="kw">end</span>
+<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span></pre>
+    </div>
+    <div class="carousel-dots" id="carouselDots"></div>
+  </div>
+
+  <div class="install-hero">
+    <code><span class="d">$ </span>gem install ruby-mana</code>
+  </div>
+  <p style="font-size:.85rem;color:var(--dim)">or <code style="color:var(--dim)">gem "ruby-mana"</code> in your Gemfile</p>
 </div>
 
 <!-- What makes it different -->
@@ -265,5 +315,37 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
 </footer>
 
 </div>
+
+<script>
+(function() {
+  const carousel = document.getElementById('heroCarousel');
+  const slides = carousel.querySelectorAll('.slide');
+  const dotsContainer = document.getElementById('carouselDots');
+  let current = 0;
+  let timer;
+
+  // Create dots
+  slides.forEach((_, i) => {
+    const dot = document.createElement('span');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotsContainer.appendChild(dot);
+  });
+
+  function goTo(index) {
+    slides[current].classList.remove('active');
+    dotsContainer.children[current].classList.remove('active');
+    current = index;
+    slides[current].classList.add('active');
+    dotsContainer.children[current].classList.add('active');
+    resetTimer();
+  }
+
+  function next() { goTo((current + 1) % slides.length); }
+  function resetTimer() { clearInterval(timer); timer = setInterval(next, 5000); }
+  resetTimer();
+})();
+</script>
+
 </body>
 </html>
