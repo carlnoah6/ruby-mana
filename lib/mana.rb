@@ -2,7 +2,6 @@
 
 require_relative "mana/version"
 require_relative "mana/config"
-require_relative "mana/effects"
 require_relative "mana/effect_registry"
 require_relative "mana/engine"
 require_relative "mana/introspect"

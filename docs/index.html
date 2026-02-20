@@ -4,479 +4,266 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ruby-mana 🔮 — Embed LLM as Native Ruby</title>
-  <meta name="description" content="Write natural language in Ruby that reads and writes variables, calls functions, and controls program flow. LLM as a first-class language construct.">
+  <meta name="description" content="Natural language strings that read/write Ruby variables, call functions, and control flow. LLM as a first-class language construct.">
+  <meta property="og:title" content="ruby-mana — Embed LLM as Native Ruby">
+  <meta property="og:description" content="Not an API wrapper. A language construct that weaves LLM into Ruby code.">
   <style>
-    :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --border: #30363d;
-      --text: #e6edf3;
-      --text-dim: #8b949e;
-      --accent: #a371f7;
-      --accent2: #f778ba;
-      --accent3: #79c0ff;
-      --code-bg: #0d1117;
-      --green: #3fb950;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
-
-    /* Hero */
-    .hero {
-      text-align: center;
-      padding: 80px 0 60px;
-      position: relative;
-    }
-
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -200px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(163,113,247,0.15) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .hero h1 {
-      font-size: 3.5rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 16px;
-    }
-
-    .hero h1 .emoji { font-size: 3rem; }
-    .hero h1 .mana { color: var(--accent); }
-
-    .hero .tagline {
-      font-size: 1.25rem;
-      color: var(--text-dim);
-      max-width: 500px;
-      margin: 0 auto 40px;
-    }
-
-    .hero-code {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px 32px;
-      text-align: left;
-      display: inline-block;
-      max-width: 600px;
-      width: 100%;
-      font-size: 0.95rem;
-    }
-
-    /* Install bar */
-    .install {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 32px;
-      flex-wrap: wrap;
-    }
-
-    .install code {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 20px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.9rem;
-      color: var(--green);
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 10px 24px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .btn-primary:hover { opacity: 0.85; }
-
-    .btn-secondary {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover { border-color: var(--accent); }
-
-    /* Sections */
-    section {
-      padding: 60px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    section h2 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
-    }
-
-    section h2 .dim { color: var(--text-dim); font-weight: 400; }
-
-    section p.lead {
-      color: var(--text-dim);
-      font-size: 1.05rem;
-      margin-bottom: 32px;
-      max-width: 600px;
-    }
-
-    /* Code blocks */
-    pre {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      overflow-x: auto;
-      margin-bottom: 24px;
-      font-size: 0.88rem;
-      line-height: 1.7;
-    }
-
-    code {
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-    }
-
-    .code-label {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
-    }
-
-    /* Syntax colors */
-    .kw { color: #ff7b72; }
-    .str { color: #a5d6ff; }
-    .mana-str { color: #f0abfc; background: rgba(163,113,247,0.1); border-radius: 3px; padding: 0 2px; }
-    .cmt { color: #8b949e; font-style: italic; }
-    .num { color: #79c0ff; }
-    .fn { color: #d2a8ff; }
-    .var { color: #ffa657; }
-    .sym { color: #7ee787; }
-    .op { color: #ff7b72; }
-
-    /* Feature grid */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-top: 32px;
-    }
-
-    .feature {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 24px;
-    }
-
-    .feature .icon { font-size: 1.5rem; margin-bottom: 8px; }
-    .feature h3 { font-size: 1rem; margin-bottom: 6px; }
-    .feature p { color: var(--text-dim); font-size: 0.88rem; }
-
-    /* How it works */
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-top: 24px;
-    }
-
-    .step {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-
-    .step-num {
-      flex-shrink: 0;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.85rem;
-    }
-
-    .step-text { padding-top: 4px; }
-    .step-text strong { color: var(--text); }
-    .step-text span { color: var(--text-dim); font-size: 0.9rem; }
-
-    /* Comparison */
-    .comparison {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-top: 24px;
-    }
-
-    .comparison > div {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-    }
-
-    .comparison h3 {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 12px;
-    }
-
-    .comparison pre {
-      margin: 0;
-      border: none;
-      background: var(--code-bg);
-      font-size: 0.82rem;
-    }
-
-    /* Footer */
-    footer {
-      padding: 40px 0;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-
-    /* Responsive */
-    @media (max-width: 640px) {
-      .hero h1 { font-size: 2.2rem; }
-      .hero .tagline { font-size: 1rem; }
-      .comparison { grid-template-columns: 1fr; }
-      .hero-code { padding: 16px 20px; font-size: 0.85rem; }
-    }
+    :root { --bg:#0d1117; --sf:#161b22; --bd:#30363d; --tx:#e6edf3; --dim:#8b949e; --ac:#a371f7; --ac2:#f778ba; --ac3:#79c0ff; --gr:#3fb950; --or:#d29922; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--tx);line-height:1.6}
+    a{color:var(--ac3);text-decoration:none} a:hover{text-decoration:underline}
+    code,pre{font-family:'SF Mono','Fira Code',monospace}
+    .c{max-width:880px;margin:0 auto;padding:0 24px}
+    nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd);padding:12px 0}
+    nav .c{display:flex;align-items:center;justify-content:space-between}
+    nav .logo{font-weight:700;font-size:1.1rem} nav .logo .m{color:var(--ac)}
+    nav .lk{display:flex;gap:20px;font-size:.9rem} nav .lk a{color:var(--dim)} nav .lk a:hover{color:var(--tx);text-decoration:none}
+    .hero{text-align:center;padding:100px 0 70px;position:relative}
+    .hero::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(163,113,247,.12) 0%,transparent 70%);pointer-events:none}
+    .hero h1{font-size:3.5rem;font-weight:800;letter-spacing:-.03em;margin-bottom:16px} .hero h1 .m{color:var(--ac)}
+    .hero .tl{font-size:1.25rem;color:var(--dim);max-width:520px;margin:0 auto 12px}
+    .hero .sub{font-size:.95rem;color:var(--dim);margin-bottom:40px} .hero .sub em{color:var(--ac2);font-style:normal}
+    .badges{display:flex;gap:8px;justify-content:center;margin-bottom:36px}
+    .badge{padding:4px 12px;border-radius:20px;font-size:.8rem;border:1px solid var(--bd);color:var(--dim)}
+    pre{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:20px 24px;overflow-x:auto;font-size:.88rem;line-height:1.7}
+    .hero-code{display:inline-block;max-width:620px;width:100%;text-align:left}
+    .kw{color:var(--ac2)} .str{color:#a5d6ff} .ms{color:var(--gr);font-weight:500} .cmt{color:var(--dim)} .num{color:var(--or)} .fn{color:#d2a8ff}
+    section{padding:60px 0} section h2{font-size:2rem;font-weight:700;margin-bottom:12px;letter-spacing:-.02em}
+    .lead{color:var(--dim);font-size:1.05rem;margin-bottom:32px;max-width:600px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+    .card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:20px 24px}
+    .card h3{font-size:1rem;margin-bottom:6px} .card p{font-size:.88rem;color:var(--dim)}
+    .card code{color:var(--gr);font-size:.85rem}
+    .cmp>div{background:var(--sf);border:2px solid var(--bd);border-radius:10px;padding:20px 24px}
+    .cmp>div h3{font-size:.95rem;margin-bottom:12px;color:var(--dim)}
+    .cmp>div:last-child{border-color:var(--ac)} .cmp>div:last-child h3{color:var(--ac)}
+    .ex{margin-top:32px} .ex h3{font-size:1.15rem;margin-bottom:12px} .ex p{font-size:.9rem;color:var(--dim);margin-bottom:12px}
+    .steps{margin-top:24px} .step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--bd)} .step:last-child{border-bottom:none}
+    .sn{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--ac);color:var(--bg);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+    .st{font-size:.92rem} .st strong{color:var(--tx)}
+    .ib{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px 24px;display:inline-block;font-size:1rem;margin-bottom:12px}
+    .ib .d{color:var(--dim);user-select:none}
+    footer{border-top:1px solid var(--bd);padding:40px 0;text-align:center;color:var(--dim);font-size:.85rem}
+    footer a{color:var(--dim)} footer a:hover{color:var(--tx)}
+    @media(max-width:640px){.hero h1{font-size:2.2rem} .grid,.cmp{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 
-<div class="container">
-  <!-- Hero -->
-  <div class="hero">
-    <h1><span class="mana">ruby-mana</span> <span class="emoji">🔮</span></h1>
-    <p class="tagline">Embed LLM as native Ruby. Write natural language, it just runs.</p>
-
-    <div class="hero-code">
-<pre style="margin:0;border:none;padding:0;background:none;"><span class="kw">require</span> <span class="str">"mana"</span>
-
-numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
-<span class="mana-str">~"compute the semantic average of &lt;numbers&gt; and store in &lt;result&gt;"</span>
-<span class="fn">puts</span> result  <span class="cmt"># =&gt; 3.0</span></pre>
-    </div>
-
-    <div class="install">
-      <code>gem install ruby-mana</code>
-      <a href="https://github.com/carlnoah6/ruby-mana" class="btn btn-primary">GitHub →</a>
-      <a href="https://rubygems.org/gems/ruby-mana" class="btn btn-secondary">RubyGems</a>
+<nav>
+  <div class="c">
+    <div class="logo">ruby-<span class="m">mana</span> 🔮</div>
+    <div class="lk">
+      <a href="#features">Features</a>
+      <a href="#examples">Examples</a>
+      <a href="#how">How it works</a>
+      <a href="https://github.com/carlnoah6/ruby-mana">GitHub</a>
+      <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a>
     </div>
   </div>
+</nav>
 
-  <!-- What makes it different -->
-  <section>
-    <h2>Not a wrapper. <span class="dim">A language construct.</span></h2>
-    <p class="lead">Most LLM libraries give you an API client. Mana gives you a new kind of string — one that executes.</p>
+<div class="c">
 
-    <div class="features">
-      <div class="feature">
-        <div class="icon">🔗</div>
-        <h3>Bidirectional binding</h3>
-        <p>LLM reads and writes your Ruby variables directly. No serialization, no parsing output.</p>
-      </div>
-      <div class="feature">
-        <div class="icon">🔄</div>
-        <h3>Loops & function calls</h3>
-        <p>LLM can iterate over collections and call your Ruby methods — with real return values.</p>
-      </div>
-      <div class="feature">
-        <div class="icon">✨</div>
-        <h3>Minimal syntax</h3>
-        <p><code>~"..."</code> in any .rb file. Natural language that just runs.</p>
-      </div>
-      <div class="feature">
-        <div class="icon">🧬</div>
-        <h3>Effect system</h3>
-        <p>Built on algebraic effects — Fiber-based handler loop with tool-use protocol.</p>
-      </div>
-      <div class="feature">
-        <div class="icon">🎯</div>
-        <h3>Object manipulation</h3>
-        <p>Read attributes, write attributes, work with any Ruby object — Structs, classes, OpenStruct.</p>
-      </div>
-      <div class="feature">
-        <div class="icon">🌐</div>
-        <h3>Multilingual</h3>
-        <p>Prompts work in any language. Write Chinese, English, Spanish — the LLM understands.</p>
-      </div>
+<!-- Hero -->
+<div class="hero">
+  <h1>ruby-<span class="m">mana</span> 🔮</h1>
+  <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
+  <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
+  <div class="badges">
+    <span class="badge">Ruby 3.3+</span>
+    <span class="badge">Anthropic Claude</span>
+    <span class="badge">MIT License</span>
+  </div>
+  <pre class="hero-code"><span class="kw">require</span> <span class="str">"mana"</span>
+
+numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
+<span class="ms">~"compute the semantic average of &lt;numbers&gt; and store in &lt;result&gt;"</span>
+puts result  <span class="cmt"># =&gt; 3.0</span></pre>
+</div>
+
+<!-- What makes it different -->
+<section>
+  <h2>What makes it different</h2>
+  <p class="lead">Mana turns LLM into a Ruby co-processor. Your natural language strings can read and write live Ruby state.</p>
+  <div class="grid cmp">
+    <div>
+      <h3>Traditional LLM wrapper</h3>
+<pre style="border:none;margin:0;background:none;">client = LLM::Client.new
+response = client.chat(
+  <span class="str">"Classify: #{email.subject}"</span>
+)
+data = JSON.parse(response)
+email.category = data[<span class="str">"category"</span>]
+email.priority = data[<span class="str">"priority"</span>]</pre>
     </div>
-  </section>
+    <div>
+      <h3>ruby-mana</h3>
+<pre style="border:none;margin:0;background:none;"><span class="ms">~"read &lt;email&gt; subject and body, set its category and priority"</span>
 
-  <!-- Examples -->
-  <section>
-    <h2>See it in action</h2>
+<span class="cmt"># That's it. email.category and email.priority are set.</span></pre>
+    </div>
+  </div>
+</section>
 
-    <div class="code-label">Object manipulation</div>
-<pre><span class="kw">class</span> <span class="fn">Email</span>
-  <span class="fn">attr_accessor</span> <span class="sym">:subject</span>, <span class="sym">:body</span>, <span class="sym">:category</span>, <span class="sym">:priority</span>
-<span class="kw">end</span>
+<!-- Features -->
+<section id="features">
+  <h2>Features</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>🔮 <code>~"..."</code> syntax</h3>
+      <p>One character turns any string into an LLM prompt that operates on live Ruby state. Variables, objects, functions — all accessible.</p>
+    </div>
+    <div class="card">
+      <h3>📖 Bidirectional binding</h3>
+      <p>LLM reads your variables with <code>&lt;var&gt;</code>, writes back with <code>write_var</code>. No serialization, no parsing — direct access to the Ruby binding.</p>
+    </div>
+    <div class="card">
+      <h3>⚡ Custom effects</h3>
+      <p>Define your own tools with <code>Mana.define_effect</code>. Block params become the tool schema. LLM calls them like native functions.</p>
+    </div>
+    <div class="card">
+      <h3>🧬 LLM compiler</h3>
+      <p><code>mana def</code> generates method implementations on first call, caches as real <code>.rb</code> files. Subsequent calls are pure Ruby — zero API cost.</p>
+    </div>
+    <div class="card">
+      <h3>🔍 Source introspection</h3>
+      <p>Prism AST parser auto-discovers your methods and their signatures. LLM knows what functions are available without you listing them.</p>
+    </div>
+    <div class="card">
+      <h3>🛡️ Effect system</h3>
+      <p>Built on algebraic effects theory. 6 built-in effects (read/write var, read/write attr, call func, done) + unlimited custom effects.</p>
+    </div>
+  </div>
+</section>
 
-email = <span class="fn">Email</span>.<span class="fn">new</span>
-email.subject = <span class="str">"URGENT: Server down"</span>
-email.body = <span class="str">"Database connection pool exhausted..."</span>
+<!-- Examples -->
+<section id="examples">
+  <h2>Examples</h2>
 
-<span class="mana-str">~"read &lt;email&gt; subject and body, set category and priority"</span>
+  <div class="ex">
+    <h3>Variables — read and write</h3>
+    <p>Use <code>&lt;var&gt;</code> to reference variables. Existing ones are read, new ones are created.</p>
+<pre>name = <span class="str">"Alice"</span>
+scores = [<span class="num">85</span>, <span class="num">92</span>, <span class="num">78</span>, <span class="num">95</span>, <span class="num">88</span>]
 
-<span class="fn">puts</span> email.category  <span class="cmt"># =&gt; "urgent"</span>
-<span class="fn">puts</span> email.priority  <span class="cmt"># =&gt; "high"</span></pre>
+<span class="ms">~"analyze &lt;scores&gt; for &lt;name&gt;, store mean in &lt;average&gt; and a comment in &lt;comment&gt;"</span>
 
-    <div class="code-label">Loops & function calls</div>
+puts average  <span class="cmt"># =&gt; 87.6</span>
+puts comment  <span class="cmt"># =&gt; "Excellent and consistent performance"</span></pre>
+  </div>
+
+  <div class="ex">
+    <h3>Function calling</h3>
+    <p>LLM discovers and calls your Ruby methods automatically via source introspection.</p>
 <pre><span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
   { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"GOOG"</span> =&gt; <span class="num">141.2</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol] || <span class="num">0</span>
 <span class="kw">end</span>
 
-<span class="kw">def</span> <span class="fn">send_alert</span>(msg)
-  <span class="fn">puts</span> <span class="str">"[ALERT] </span>#{msg}<span class="str">"</span>
+portfolio = [<span class="str">"AAPL"</span>, <span class="str">"GOOG"</span>, <span class="str">"TSLA"</span>]
+<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, store the sum in &lt;total&gt;"</span>
+puts total  <span class="cmt"># =&gt; 579.6</span></pre>
+  </div>
+
+  <div class="ex">
+    <h3>Custom effect handlers</h3>
+    <p>Define your own tools. Block keyword params become the tool's input schema.</p>
+<pre>Mana.define_effect <span class="str">:query_db</span>,
+  description: <span class="str">"Execute a SQL query"</span> <span class="kw">do</span> |sql:|
+    ActiveRecord::Base.connection.execute(sql).to_a
+  <span class="kw">end</span>
+
+<span class="ms">~"find the 5 most recent orders using query_db, store in &lt;orders&gt;"</span>
+orders.each { |o| puts o[<span class="str">"id"</span>] }</pre>
+  </div>
+
+  <div class="ex">
+    <h3>LLM-compiled methods</h3>
+    <p>LLM writes the implementation once, caches it as a real <code>.rb</code> file. After that, pure Ruby.</p>
+<pre><span class="kw">mana def</span> <span class="fn">fizzbuzz</span>(n)
+  <span class="ms">~"return an array of FizzBuzz results from 1 to n"</span>
 <span class="kw">end</span>
 
-portfolio = [<span class="str">"AAPL"</span>, <span class="str">"GOOG"</span>, <span class="str">"TSLA"</span>, <span class="str">"MSFT"</span>]
+fizzbuzz(<span class="num">15</span>)  <span class="cmt"># first call → LLM generates → .mana_cache/fizzbuzz.rb</span>
+fizzbuzz(<span class="num">20</span>)  <span class="cmt"># pure Ruby, zero API cost</span>
 
-<span class="mana-str">~"iterate &lt;portfolio&gt;, call fetch_price for each, send_alert if price &gt; 200, store the sum in &lt;total&gt;"</span>
-<span class="fn">puts</span> total  <span class="cmt"># =&gt; 579.6</span></pre>
+puts Mana.source(<span class="str">:fizzbuzz</span>)  <span class="cmt"># view the generated code</span></pre>
+  </div>
 
-    <div class="code-label">Mixed control flow — Ruby structure, LLM decisions</div>
-<pre>player_hp = <span class="num">100</span>
-enemy_hp = <span class="num">80</span>
-inventory = [<span class="str">"sword"</span>, <span class="str">"potion"</span>, <span class="str">"shield"</span>]
+  <div class="ex">
+    <h3>Object manipulation</h3>
+    <p>LLM reads and writes object attributes directly.</p>
+<pre><span class="kw">class</span> Email
+  <span class="kw">attr_accessor</span> <span class="str">:subject</span>, <span class="str">:body</span>, <span class="str">:category</span>, <span class="str">:priority</span>
+<span class="kw">end</span>
 
-<span class="kw">while</span> player_hp &gt; <span class="num">0</span> &amp;&amp; enemy_hp &gt; <span class="num">0</span>
-  <span class="mana-str">~"player HP=&lt;player_hp&gt;, enemy HP=&lt;enemy_hp&gt;, inventory=&lt;inventory&gt;, choose an action and store in &lt;action&gt;"</span>
+email = Email.new
+email.subject = <span class="str">"URGENT: Server down"</span>
+email.body = <span class="str">"Database connection pool exhausted..."</span>
 
-  <span class="kw">case</span> action
-  <span class="kw">when</span> <span class="str">"attack"</span> <span class="kw">then</span> enemy_hp -= <span class="fn">rand</span>(<span class="num">15</span>..<span class="num">25</span>)
-  <span class="kw">when</span> <span class="str">"defend"</span> <span class="kw">then</span> <span class="kw">nil</span>
-  <span class="kw">when</span> <span class="str">"use_item"</span>
-    <span class="mana-str">~"pick a healing item from &lt;inventory&gt; and store in &lt;item_name&gt;"</span>
-    inventory.delete(item_name)
-    player_hp += <span class="num">25</span>
-  <span class="kw">end</span>
-<span class="kw">end</span></pre>
-  </section>
+<span class="ms">~"read &lt;email&gt; subject and body, set its category and priority"</span>
+puts email.category  <span class="cmt"># =&gt; "infrastructure"</span>
+puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
+  </div>
+</section>
 
-  <!-- How it works -->
-  <section>
-    <h2>How it works</h2>
-    <p class="lead">Mana uses an effect system — a Fiber-based handler loop with LLM tool-use protocol.</p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-text">
-          <strong>Capture</strong><br>
-          <span><code>~"..."</code> calls <code>String#~@</code>, which captures the caller's <code>Binding</code> via <code>binding_of_caller</code></span>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-text">
-          <strong>Parse</strong><br>
-          <span>Engine extracts <code>&lt;var&gt;</code> references and reads existing variables as context</span>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-text">
-          <strong>Execute</strong><br>
-          <span>Prompt + context sent to LLM with tools: <code>read_var</code>, <code>write_var</code>, <code>read_attr</code>, <code>write_attr</code>, <code>call_func</code>, <code>done</code></span>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-text">
-          <strong>Loop</strong><br>
-          <span>LLM responds with tool calls → Mana executes against live Ruby binding → sends results back → repeat until <code>done</code></span>
-        </div>
-      </div>
+<!-- How it works -->
+<section id="how">
+  <h2>How it works</h2>
+  <p class="lead">Mana uses Ruby's unary <code>~</code> operator and algebraic effects to bridge natural language and code.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="sn">1</div>
+      <div class="st"><strong>~"..." triggers String#~@</strong> — captures the caller's Binding via <code>binding_of_caller</code></div>
     </div>
-  </section>
-
-  <!-- Comparison -->
-  <section>
-    <h2>Mana vs. the rest</h2>
-    <p class="lead">Existing Ruby LLM libraries are API wrappers. Mana is a language extension.</p>
-
-    <div class="comparison">
-      <div>
-        <h3>Typical LLM gem</h3>
-<pre style="border:none;margin:0;background:none;">client = LLM::Client.new
-response = client.chat(
-  "Classify this email: #{email}"
-)
-category = JSON.parse(response)["category"]
-email.category = category</pre>
-      </div>
-      <div style="border-color: var(--accent);">
-        <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;"><span class="mana-str">~"read &lt;email&gt; subject and body, set category"</span>
-
-<span class="cmt"># That's it. email.category is set.</span></pre>
-      </div>
+    <div class="step">
+      <div class="sn">2</div>
+      <div class="st"><strong>Parse &lt;var&gt; references</strong> — reads existing variables as context, discovers available methods via Prism AST</div>
     </div>
-  </section>
+    <div class="step">
+      <div class="sn">3</div>
+      <div class="st"><strong>Send to LLM with tools</strong> — 6 built-in effects + any custom effects registered via <code>define_effect</code></div>
+    </div>
+    <div class="step">
+      <div class="sn">4</div>
+      <div class="st"><strong>Execute tool calls</strong> — LLM responds with tool calls → Mana executes against the live Ruby binding → sends results back</div>
+    </div>
+    <div class="step">
+      <div class="sn">5</div>
+      <div class="st"><strong>Loop until done</strong> — LLM calls <code>done</code> or returns without tool calls. Variables are set, objects are modified, functions were called.</div>
+    </div>
+  </div>
+</section>
 
-  <!-- Research -->
-  <section>
-    <h2>Research</h2>
-    <p class="lead">Mana is inspired by MIT's Nightjar project and the theory of algebraic effects.</p>
-    <p style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.8;">
-      📄 <a href="https://arxiv.org/abs/2512.14805" style="color: var(--accent3);">Sharing State Between Prompts and Programs</a> — the paper that started it all<br>
-      🐍 <a href="https://github.com/psg-mit/nightjarpy" style="color: var(--accent3);">nightjarpy</a> — MIT's Python implementation<br>
-      💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax and effect system
-    </p>
-  </section>
+<!-- Install -->
+<section>
+  <h2>Install</h2>
+  <div class="ib"><code><span class="d">$ </span>gem install ruby-mana</code></div>
+  <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Or in your Gemfile: <code>gem "ruby-mana"</code></p>
+  <p style="color:var(--dim);font-size:.9rem">Requires Ruby 3.3+ and <code>ANTHROPIC_API_KEY</code> environment variable.</p>
+</section>
 
-  <!-- Footer -->
-  <footer>
-    <p>
-      <a href="https://github.com/carlnoah6/ruby-mana">GitHub</a> ·
-      <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a> ·
-      MIT License
-    </p>
-    <p style="margin-top: 8px;">Ruby 3.3+ · Anthropic Claude</p>
-  </footer>
+<!-- Research -->
+<section>
+  <h2>Research</h2>
+  <p class="lead">Mana is inspired by MIT's Nightjar project and the theory of algebraic effects and handlers.</p>
+  <p style="color:var(--dim);font-size:.9rem;line-height:1.8">
+    📄 <a href="https://arxiv.org/abs/2512.14805">Sharing State Between Prompts and Programs</a> — the paper behind this approach<br>
+    🐍 <a href="https://github.com/psg-mit/nightjarpy">nightjarpy</a> — MIT's Python implementation<br>
+    💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax, effect system, and LLM compiler
+  </p>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>
+    <a href="https://github.com/carlnoah6/ruby-mana">GitHub</a> ·
+    <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a> ·
+    MIT License
+  </p>
+  <p style="margin-top:8px">Ruby 3.3+ · Built with algebraic effects</p>
+</footer>
+
 </div>
-
 </body>
 </html>
