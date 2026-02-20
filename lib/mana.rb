@@ -5,6 +5,7 @@ require_relative "mana/config"
 require_relative "mana/effects"
 require_relative "mana/engine"
 require_relative "mana/introspect"
+require_relative "mana/compiler"
 require_relative "mana/string_ext"
 require_relative "mana/mixin"
 
@@ -33,6 +34,16 @@ module Mana
 
     def reset!
       @config = Config.new
+    end
+
+    # View generated source for a mana-compiled method
+    def source(method_name, owner: nil)
+      Compiler.source(method_name, owner: owner)
+    end
+
+    # Cache directory for compiled methods
+    def cache_dir=(dir)
+      Compiler.cache_dir = dir
     end
   end
 end

@@ -2,6 +2,7 @@
 
 require "webmock/rspec"
 require "tempfile"
+require "tmpdir"
 require "mana"
 
 RSpec.configure do |config|

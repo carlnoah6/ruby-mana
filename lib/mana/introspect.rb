@@ -47,10 +47,13 @@ module Mana
       private
 
       def walk(node, &block)
-        return unless node.respond_to?(:compact_child_nodes)
+        queue = [node]
+        while (current = queue.shift)
+          next unless current.respond_to?(:compact_child_nodes)
 
-        block.call(node)
-        node.compact_child_nodes.each { |child| walk(child, &block) }
+          block.call(current)
+          queue.concat(current.compact_child_nodes)
+        end
       end
 
       def extract_params(def_node)
