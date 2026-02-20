@@ -58,7 +58,41 @@
     .install-hero{margin-top:32px;margin-bottom:8px}
     .install-hero code{font-size:1.05rem;color:var(--gr)}
     .install-hero .d{color:var(--dim);user-select:none}
-    @media(max-width:640px){.hero h1{font-size:2.2rem} .grid,.cmp{grid-template-columns:1fr}}
+
+    /* Mobile */
+    @media(max-width:768px){
+      .c{padding:0 16px}
+      nav .lk{gap:12px;font-size:.8rem}
+      .hero{padding:60px 0 40px}
+      .hero h1{font-size:2.4rem}
+      .hero .tl{font-size:1.05rem}
+      .hero .sub{font-size:.85rem;margin-bottom:24px}
+      .badges{flex-wrap:wrap}
+      pre{padding:14px 16px;font-size:.78rem;line-height:1.6;-webkit-overflow-scrolling:touch}
+      .carousel{max-width:100%}
+      section{padding:40px 0}
+      section h2{font-size:1.5rem}
+      .lead{font-size:.95rem}
+      .grid,.cmp{grid-template-columns:1fr}
+      .card{padding:16px 18px}
+      .card h3{font-size:.95rem}
+      .card p{font-size:.82rem}
+      .cmp>div{padding:16px 18px}
+      .ex h3{font-size:1.05rem}
+      .step{gap:12px;padding:12px 0}
+      .sn{width:28px;height:28px;font-size:.8rem}
+      .st{font-size:.85rem}
+      .install-hero code{font-size:.9rem}
+      footer{padding:30px 0}
+    }
+    @media(max-width:480px){
+      nav .c{flex-direction:column;gap:8px}
+      nav .lk{justify-content:center;flex-wrap:wrap;gap:10px}
+      .hero h1{font-size:1.9rem}
+      .hero .tl{font-size:.95rem}
+      pre{padding:12px 12px;font-size:.72rem;border-radius:8px}
+      .badges .badge{font-size:.7rem;padding:3px 8px}
+    }
   </style>
 </head>
 <body>
@@ -342,8 +376,17 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   }
 
   function next() { goTo((current + 1) % slides.length); }
+  function prev() { goTo((current - 1 + slides.length) % slides.length); }
   function resetTimer() { clearInterval(timer); timer = setInterval(next, 5000); }
   resetTimer();
+
+  // Touch swipe
+  let startX = 0;
+  carousel.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, {passive: true});
+  carousel.addEventListener('touchend', function(e) {
+    const diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
+  }, {passive: true});
 })();
 </script>
 
