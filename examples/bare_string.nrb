@@ -1,0 +1,15 @@
+# Example: Bare string in .nrb file — no ~ needed
+# Load with: require "mana"; Mana.load("examples/bare_string")
+
+numbers = [1, "2", "three", "cuatro", "五"]
+"算 <numbers> 的语义平均值存 <result>"
+puts result
+
+documents = [
+  { title: "Q1 Report", content: "Revenue grew 15%..." },
+  { title: "Q2 Report", content: "Costs increased 8%..." },
+  { title: "HR Policy", content: "Remote work allowed..." }
+]
+
+"遍历 <documents>，找出跟财务相关的，摘要后存 <summaries>"
+summaries.each { |s| puts s }
