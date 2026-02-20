@@ -57,8 +57,9 @@ module Mana
           # Store in registry
           compiler.registry[key] = generated
 
-          # Load the file — this redefines the method with pure Ruby
-          load cache_path
+          # Define the method on the correct owner (not Object) via class_eval
+          target_owner = owner
+          target_owner.class_eval(generated, cache_path, 1)
 
           # Call the now-native method
           send(method_name, *args, **kwargs, &blk)
