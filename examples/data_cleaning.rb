@@ -8,7 +8,7 @@ raw_contacts = [
   { name: "Jane Smith PhD", phone: "(555) 123-4567", email: "jane.smith@company.co" },
   { name: "bob", phone: "+1-999-888-7777", email: "BOB123@yahoo" },
   { name: "María García-López", phone: "N/A", email: "maria@empresa.mx" },
-  { name: "Li Ming", phone: "13800138000", email: "liming@163.com" }
+  { name: "李明", phone: "13800138000", email: "liming@163.com" }
 ]
 
 cleaned = []

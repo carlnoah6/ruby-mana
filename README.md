@@ -5,7 +5,7 @@ Embed LLM as native Ruby. Write natural language, it just runs.
 ```ruby
 require "mana"
 
-numbers = [1, "2", "three", "cuatro", "cinq"]
+numbers = [1, "2", "three", "cuatro", "五"]
 ~"compute the semantic average of <numbers> and store in <result>"
 puts result  # => 3.0
 ```
