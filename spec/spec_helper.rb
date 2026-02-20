@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "webmock/rspec"
+require "tempfile"
 require "mana"
 
 RSpec.configure do |config|

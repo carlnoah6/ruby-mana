@@ -98,6 +98,7 @@ module Mana
       @prompt = prompt
       @binding = caller_binding
       @config = Mana.config
+      @caller_path = caller_source_path
     end
 
     def execute
@@ -123,7 +124,7 @@ module Mana
         # Process each tool use
         tool_results = tool_uses.map do |tu|
           result = handle_effect(tu)
-          done_result = tu[:input]["result"] if tu[:name] == "done"
+          done_result = (tu[:input][:result] || tu[:input]["result"]) if tu[:name] == "done"
           { type: "tool_result", tool_use_id: tu[:id], content: result.to_s }
         end
 
@@ -170,6 +171,13 @@ module Mana
         parts << ""
         parts << "Current variable values:"
         context.each { |k, v| parts << "  #{k} = #{v}" }
+      end
+
+      # Discover available functions from caller's source
+      methods = Mana::Introspect.methods_from_file(@caller_path)
+      unless methods.empty?
+        parts << ""
+        parts << Mana::Introspect.format_for_prompt(methods)
       end
 
       parts.join("\n")
@@ -247,6 +255,20 @@ module Mana
     def write_local(name, value)
       validate_name!(name)
       @binding.local_variable_set(name.to_sym, value)
+    end
+
+    def caller_source_path
+      # Walk up the call stack to find the first non-mana source file
+      loc = @binding.source_location
+      return loc[0] if loc.is_a?(Array)
+
+      # Fallback: search caller_locations
+      caller_locations(4, 20)&.each do |frame|
+        path = frame.absolute_path || frame.path
+        next if path.nil? || path.include?("mana/")
+        return path
+      end
+      nil
     end
 
     def serialize_value(val)
