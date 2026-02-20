@@ -124,7 +124,7 @@ module Mana
         # Process each tool use
         tool_results = tool_uses.map do |tu|
           result = handle_effect(tu)
-          done_result = tu[:input]["result"] if tu[:name] == "done"
+          done_result = (tu[:input][:result] || tu[:input]["result"]) if tu[:name] == "done"
           { type: "tool_result", tool_use_id: tu[:id], content: result.to_s }
         end
 

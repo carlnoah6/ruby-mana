@@ -149,8 +149,8 @@ RSpec.describe Mana::Engine do
           headers: { "Content-Type" => "application/json" },
           body: JSON.generate({
             content: [
-              { type: "tool_use", id: "t1", name: "write_var", input: { "name" => "a", "value" => 1 } },
-              { type: "tool_use", id: "t2", name: "write_var", input: { "name" => "b", "value" => 2 } }
+              { type: "tool_use", id: "t1", name: "write_var", input: { "name" => "xx", "value" => 1 } },
+              { type: "tool_use", id: "t2", name: "write_var", input: { "name" => "yy", "value" => 2 } }
             ]
           })
         ).then
@@ -162,10 +162,10 @@ RSpec.describe Mana::Engine do
           })
         )
 
-      b = binding
-      Mana::Engine.run("set a=1 and b=2", b)
-      expect(b.local_variable_get(:a)).to eq(1)
-      expect(b.local_variable_get(:b)).to eq(2)
+      bnd = binding
+      Mana::Engine.run("set xx=1 and yy=2", bnd)
+      expect(bnd.local_variable_get(:xx)).to eq(1)
+      expect(bnd.local_variable_get(:yy)).to eq(2)
     end
 
     it "handles unknown tool gracefully" do
@@ -220,8 +220,9 @@ RSpec.describe Mana::Engine do
     end
 
     it "serializes custom objects via instance variables" do
-      klass = Struct.new(:name, :age, keyword_init: true)
-      obj = klass.new(name: "Alice", age: 30)
+      obj = Object.new
+      obj.instance_variable_set(:@name, "Alice")
+      obj.instance_variable_set(:@age, 30)
       result = engine.send(:serialize_value, obj)
       expect(result).to include("name")
       expect(result).to include("Alice")
