@@ -3,6 +3,6 @@
 # Example: Basic ~"..." usage
 require "mana"
 
-numbers = [1, "2", "three", "cuatro", "cinq"]
+numbers = [1, "2", "three", "cuatro", "五"]
 ~"consider the semantic values of <numbers>, compute their average and store in <result>"
 puts result

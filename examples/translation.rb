@@ -4,24 +4,24 @@
 require "mana"
 
 menu_items = [
-  { dish: "Kung Pao Chicken", price: 38 },
-  { dish: "Mapo Tofu", price: 28 },
-  { dish: "Braised Pork Belly", price: 45 },
-  { dish: "Steamed Sea Bass", price: 68 }
+  { dish: "宫保鸡丁", price: 38 },
+  { dish: "麻婆豆腐", price: 28 },
+  { dish: "红烧肉", price: 45 },
+  { dish: "清蒸鲈鱼", price: 68 }
 ]
 
 translations = {}
 
 menu_items.each do |item|
   dish = item[:dish]
-  ~"translate the dish name '#{dish}' to French and store in <french>, to Japanese and store in <japanese>, and write a one-line description in <description>"
-  translations[dish] = { fr: french, ja: japanese, desc: description, price: item[:price] }
+  ~"translate the dish name '#{dish}' to English and store in <english>, to Japanese and store in <japanese>, and write a one-line English description in <description>"
+  translations[dish] = { en: english, ja: japanese, desc: description, price: item[:price] }
 end
 
 puts "=" * 70
-puts "MENU"
+puts "MENU / メニュー / 菜单"
 puts "=" * 70
-translations.each do |en, info|
-  puts "\n#{en} / #{info[:fr]} / #{info[:ja]}"
-  puts "  $#{info[:price]} — #{info[:desc]}"
+translations.each do |cn, info|
+  puts "\n#{cn} / #{info[:en]} / #{info[:ja]}"
+  puts "  ¥#{info[:price]} — #{info[:desc]}"
 end
