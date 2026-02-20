@@ -6,7 +6,7 @@ Embed LLM as native Ruby. Write natural language, it just runs.
 require "mana"
 
 numbers = [1, "2", "three", "cuatro", "五"]
-~"算 <numbers> 的语义平均值存 <result>"
+~"compute the semantic average of <numbers> and store in <result>"
 puts result  # => 3.0
 ```
 
@@ -36,31 +36,14 @@ export ANTHROPIC_API_KEY=your_key_here
 
 ## Usage
 
-### Two ways to write
-
-**`~"..."` — works in any `.rb` file:**
+Prefix any string with `~` to make it an LLM prompt:
 
 ```ruby
 require "mana"
 
 numbers = [1, 2, 3, 4, 5]
-~"算 <numbers> 的平均值存 <result>"
+~"compute the average of <numbers> and store in <result>"
 puts result
-```
-
-**Bare strings — in `.nrb` files:**
-
-```ruby
-# math.nrb
-numbers = [1, 2, 3, 4, 5]
-"算 <numbers> 的平均值存 <result>"
-puts result
-```
-
-```ruby
-# main.rb
-require "mana"
-Mana.load("math")  # loads math.nrb from same directory
 ```
 
 ### Variables
@@ -74,11 +57,11 @@ Use `<var>` to reference variables. Mana figures out read vs write:
 name = "Alice"
 scores = [85, 92, 78, 95, 88]
 
-~"给 <name> 的 <scores> 做个分析，平均分存 <average>，最高分存 <best>，评语存 <comment>"
+~"analyze <scores> for <name>, store the mean in <average>, the highest in <best>, and a short comment in <comment>"
 
 puts average  # => 87.6
 puts best     # => 95
-puts comment  # => "成绩优秀，表现稳定"
+puts comment  # => "Excellent and consistent performance"
 ```
 
 ### Object manipulation
@@ -94,7 +77,7 @@ email = Email.new
 email.subject = "URGENT: Server down"
 email.body = "Database connection pool exhausted..."
 
-~"读 <email> 的 subject 和 body，设 category 和 priority"
+~"read <email> subject and body, then set its category and priority"
 
 puts email.category  # => "urgent"
 puts email.priority   # => "high"
@@ -115,7 +98,7 @@ end
 
 portfolio = ["AAPL", "GOOG", "TSLA", "MSFT"]
 
-~"遍历 <portfolio>，调用 fetch_price 拿价格，价格>200 就 send_alert，总和存 <total>"
+~"iterate <portfolio>, call fetch_price for each, send_alert if price > 200, store the sum in <total>"
 puts total  # => 579.6
 ```
 
@@ -129,13 +112,13 @@ enemy_hp = 80
 inventory = ["sword", "potion", "shield"]
 
 while player_hp > 0 && enemy_hp > 0
-  ~"玩家 HP=<player_hp>，敌人 HP=<enemy_hp>，背包=<inventory>，选行动存 <action>"
+  ~"player HP=<player_hp>, enemy HP=<enemy_hp>, inventory=<inventory>, choose an action and store in <action>"
 
   case action
   when "attack" then enemy_hp -= rand(15..25)
   when "defend" then nil
   when "use_item"
-    ~"从 <inventory> 选一个治疗物品存 <item_name>"
+    ~"pick a healing item from <inventory> and store its name in <item_name>"
     inventory.delete(item_name)
     player_hp += 25
   end
@@ -165,8 +148,6 @@ Mana.model = "claude-sonnet-4-20250514"
 3. The prompt + context is sent to the LLM with tools: `read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`
 4. LLM responds with tool calls → Mana executes them against the live Ruby binding → sends results back
 5. Loop until LLM calls `done` or returns without tool calls
-
-For `.nrb` files, Prism (Ruby 3.3+ built-in parser) identifies bare string statements in the AST and prepends `~` during load.
 
 ## Safety
 

@@ -5,7 +5,6 @@ require_relative "mana/config"
 require_relative "mana/effects"
 require_relative "mana/engine"
 require_relative "mana/string_ext"
-require_relative "mana/loader"
 require_relative "mana/mixin"
 
 module Mana

@@ -9,8 +9,7 @@ Gem::Specification.new do |s|
   s.description = <<~DESC
     Mana lets you write natural language strings in Ruby that execute via LLM
     with full access to your program's live state. Read/write variables, call
-    functions, manipulate objects — all from a simple ~"..." or bare strings
-    in .nrb files.
+    functions, manipulate objects — all from a simple ~"..." syntax.
   DESC
   s.authors     = ["Carl"]
   s.license     = "MIT"

@@ -294,7 +294,7 @@
 <pre style="margin:0;border:none;padding:0;background:none;"><span class="kw">require</span> <span class="str">"mana"</span>
 
 numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
-<span class="mana-str">~"算 &lt;numbers&gt; 的语义平均值存 &lt;result&gt;"</span>
+<span class="mana-str">~"compute the semantic average of &lt;numbers&gt; and store in &lt;result&gt;"</span>
 <span class="fn">puts</span> result  <span class="cmt"># =&gt; 3.0</span></pre>
     </div>
 
@@ -324,7 +324,7 @@ numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class
       <div class="feature">
         <div class="icon">✨</div>
         <h3>Minimal syntax</h3>
-        <p><code>~"..."</code> in .rb files. Bare strings in .nrb files. That's it.</p>
+        <p><code>~"..."</code> in any .rb file. Natural language that just runs.</p>
       </div>
       <div class="feature">
         <div class="icon">🧬</div>
@@ -357,7 +357,7 @@ email = <span class="fn">Email</span>.<span class="fn">new</span>
 email.subject = <span class="str">"URGENT: Server down"</span>
 email.body = <span class="str">"Database connection pool exhausted..."</span>
 
-<span class="mana-str">~"读 &lt;email&gt; 的 subject 和 body，设 category 和 priority"</span>
+<span class="mana-str">~"read &lt;email&gt; subject and body, set category and priority"</span>
 
 <span class="fn">puts</span> email.category  <span class="cmt"># =&gt; "urgent"</span>
 <span class="fn">puts</span> email.priority  <span class="cmt"># =&gt; "high"</span></pre>
@@ -373,7 +373,7 @@ email.body = <span class="str">"Database connection pool exhausted..."</span>
 
 portfolio = [<span class="str">"AAPL"</span>, <span class="str">"GOOG"</span>, <span class="str">"TSLA"</span>, <span class="str">"MSFT"</span>]
 
-<span class="mana-str">~"遍历 &lt;portfolio&gt;，调用 fetch_price 拿价格，价格&gt;200 就 send_alert，总和存 &lt;total&gt;"</span>
+<span class="mana-str">~"iterate &lt;portfolio&gt;, call fetch_price for each, send_alert if price &gt; 200, store the sum in &lt;total&gt;"</span>
 <span class="fn">puts</span> total  <span class="cmt"># =&gt; 579.6</span></pre>
 
     <div class="code-label">Mixed control flow — Ruby structure, LLM decisions</div>
@@ -382,23 +382,17 @@ enemy_hp = <span class="num">80</span>
 inventory = [<span class="str">"sword"</span>, <span class="str">"potion"</span>, <span class="str">"shield"</span>]
 
 <span class="kw">while</span> player_hp &gt; <span class="num">0</span> &amp;&amp; enemy_hp &gt; <span class="num">0</span>
-  <span class="mana-str">~"玩家 HP=&lt;player_hp&gt;，敌人 HP=&lt;enemy_hp&gt;，背包=&lt;inventory&gt;，选行动存 &lt;action&gt;"</span>
+  <span class="mana-str">~"player HP=&lt;player_hp&gt;, enemy HP=&lt;enemy_hp&gt;, inventory=&lt;inventory&gt;, choose an action and store in &lt;action&gt;"</span>
 
   <span class="kw">case</span> action
   <span class="kw">when</span> <span class="str">"attack"</span> <span class="kw">then</span> enemy_hp -= <span class="fn">rand</span>(<span class="num">15</span>..<span class="num">25</span>)
   <span class="kw">when</span> <span class="str">"defend"</span> <span class="kw">then</span> <span class="kw">nil</span>
   <span class="kw">when</span> <span class="str">"use_item"</span>
-    <span class="mana-str">~"从 &lt;inventory&gt; 选一个治疗物品存 &lt;item_name&gt;"</span>
+    <span class="mana-str">~"pick a healing item from &lt;inventory&gt; and store in &lt;item_name&gt;"</span>
     inventory.delete(item_name)
     player_hp += <span class="num">25</span>
   <span class="kw">end</span>
 <span class="kw">end</span></pre>
-
-    <div class="code-label">Bare strings in .nrb files — no ~ needed</div>
-<pre><span class="cmt"># math.nrb</span>
-numbers = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
-<span class="mana-str">"算 &lt;numbers&gt; 的平均值存 &lt;result&gt;"</span>
-<span class="fn">puts</span> result</pre>
   </section>
 
   <!-- How it works -->
@@ -455,7 +449,7 @@ email.category = category</pre>
       </div>
       <div style="border-color: var(--accent);">
         <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;"><span class="mana-str">~"读 &lt;email&gt; 的 subject 和 body，设 category"</span>
+<pre style="border:none;margin:0;background:none;"><span class="mana-str">~"read &lt;email&gt; subject and body, set category"</span>
 
 <span class="cmt"># That's it. email.category is set.</span></pre>
       </div>
@@ -469,7 +463,7 @@ email.category = category</pre>
     <p style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.8;">
       📄 <a href="https://arxiv.org/abs/2512.14805" style="color: var(--accent3);">Sharing State Between Prompts and Programs</a> — the paper that started it all<br>
       🐍 <a href="https://github.com/psg-mit/nightjarpy" style="color: var(--accent3);">nightjarpy</a> — MIT's Python implementation<br>
-      💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax and Prism AST transforms
+      💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax and effect system
     </p>
   </section>
 

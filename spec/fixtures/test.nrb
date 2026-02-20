@@ -1,4 +1,0 @@
-# test.nrb — fixture for loader tests
-numbers = [1, 2, 3]
-"compute the sum of <numbers> and store in <total>"
-puts total

@@ -20,10 +20,10 @@ end
 
 languages = ["Ruby", "Python", "Rust", "Go"]
 
-~"用 search_db 查询 <languages> 里每种语言的信息。
-  用 calculate 算出它们的平均创建年份。
-  按创建时间排序，写一段比较分析存 <analysis>。
-  最老的语言存 <oldest>，最新的存 <newest>"
+~"use search_db to look up each language in <languages>.
+  use calculate to compute their average creation year.
+  sort them by creation year, write a comparative analysis and store in <analysis>.
+  store the oldest language name in <oldest> and the newest in <newest>"
 
 puts "Oldest: #{oldest}"
 puts "Newest: #{newest}"
