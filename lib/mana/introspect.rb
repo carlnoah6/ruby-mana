@@ -46,12 +46,14 @@ module Mana
 
       private
 
-      def walk(node, depth = 0, &block)
-        return if depth > 100
-        return unless node.respond_to?(:compact_child_nodes)
+      def walk(node, &block)
+        stack = [node]
+        while (current = stack.pop)
+          next unless current.respond_to?(:compact_child_nodes)
 
-        block.call(node)
-        node.compact_child_nodes.each { |child| walk(child, depth + 1, &block) }
+          block.call(current)
+          stack.concat(current.compact_child_nodes)
+        end
       end
 
       def extract_params(def_node)
