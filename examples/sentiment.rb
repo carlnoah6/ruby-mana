@@ -14,7 +14,7 @@ reviews = [
 results = []
 
 reviews.each do |review|
-  ~"分析这条评论的情感: '#{review}'。存 sentiment 为 positive/neutral/negative，confidence 为 0-1 的浮点数"
+  ~"analyze the sentiment of this review: '#{review}'. Store sentiment as positive/neutral/negative in <sentiment>, and confidence as a float 0-1 in <confidence>"
   results << { text: review, sentiment: sentiment, confidence: confidence }
 end
 
@@ -22,5 +22,5 @@ results.each do |r|
   puts "#{r[:sentiment].upcase.ljust(10)} (#{r[:confidence]}) #{r[:text][0..50]}..."
 end
 
-~"根据 <results>，写一段总结存 <summary>"
+~"based on <results>, write a brief summary and store in <summary>"
 puts "\n#{summary}"

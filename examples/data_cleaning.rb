@@ -14,11 +14,11 @@ raw_contacts = [
 cleaned = []
 
 raw_contacts.each do |contact|
-  ~"清洗这条联系人数据 #{contact.inspect}：
-    - name 标准化为 Title Case（保留非拉丁字符原样）
-    - phone 统一为 +X-XXX-XXX-XXXX 格式（无效的设为 nil）
-    - email 小写化，无效的设为 nil
-    结果存 <clean_name> <clean_phone> <clean_email>"
+  ~"clean this contact data #{contact.inspect}:
+    - normalize name to Title Case (keep non-Latin characters as-is)
+    - normalize phone to +X-XXX-XXX-XXXX format (set nil if invalid)
+    - lowercase email (set nil if invalid)
+    store results in <clean_name> <clean_phone> <clean_email>"
 
   cleaned << { name: clean_name, phone: clean_phone, email: clean_email }
 end

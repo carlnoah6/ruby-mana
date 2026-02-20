@@ -12,7 +12,7 @@ while player_hp > 0 && enemy_hp > 0
   round += 1
   puts "=== Round #{round} | Player: #{player_hp} HP | Enemy: #{enemy_hp} HP ==="
 
-  ~"玩家 HP=<player_hp>，敌人 HP=<enemy_hp>，背包=<inventory>。选行动存 <action>（attack/defend/use_item），如果 use_item 把物品名存 <item_name>"
+  ~"player HP=<player_hp>, enemy HP=<enemy_hp>, inventory=<inventory>. Choose an action and store in <action> (attack/defend/use_item). If use_item, store the item name in <item_name>"
 
   case action
   when "attack"

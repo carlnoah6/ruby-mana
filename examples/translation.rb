@@ -14,7 +14,7 @@ translations = {}
 
 menu_items.each do |item|
   dish = item[:dish]
-  ~"把菜名 '#{dish}' 翻译成英文存 <english>，翻译成日文存 <japanese>，写一句英文描述存 <description>"
+  ~"translate the dish name '#{dish}' to English and store in <english>, to Japanese and store in <japanese>, and write a one-line English description in <description>"
   translations[dish] = { en: english, ja: japanese, desc: description, price: item[:price] }
 end
 

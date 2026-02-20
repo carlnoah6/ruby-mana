@@ -23,6 +23,6 @@ email = Email.new(
   sender: "ops@company.com"
 )
 
-~"读 <email> 的 subject 和 body，设 category 为 urgent/bug/feature/spam，priority 为 high/medium/low"
+~"read <email> subject and body, set category to urgent/bug/feature/spam and priority to high/medium/low"
 
 puts email

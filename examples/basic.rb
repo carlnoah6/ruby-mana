@@ -4,5 +4,5 @@
 require "mana"
 
 numbers = [1, "2", "three", "cuatro", "五"]
-~"考虑 <numbers> 的语义值，计算平均数存入 <result>"
+~"consider the semantic values of <numbers>, compute their average and store in <result>"
 puts result

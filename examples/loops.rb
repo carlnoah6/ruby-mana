@@ -13,6 +13,6 @@ end
 
 portfolio = ["AAPL", "GOOG", "TSLA", "MSFT"]
 
-~"遍历 <portfolio>，对每个 symbol 调用 fetch_price 拿价格。价格>200 就 send_alert，价格==0 也 send_alert。有效价格总和存 <total>"
+~"iterate <portfolio>, call fetch_price for each symbol. If price > 200 call send_alert, if price == 0 also send_alert. Store the sum of valid prices in <total>"
 
 puts "Total: #{total}"

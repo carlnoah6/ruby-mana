@@ -4,7 +4,7 @@
 require "mana"
 
 # Describe a function in natural language, LLM writes the implementation
-~"写一个 Ruby 方法 fizzbuzz(n)，返回 1 到 n 的 FizzBuzz 数组。代码存 <code>"
+~"write a Ruby method fizzbuzz(n) that returns an array of FizzBuzz results from 1 to n. Store the code in <code>"
 
 eval(code) # rubocop:disable Security/Eval
 puts fizzbuzz(15).inspect
@@ -18,7 +18,7 @@ data = [
   { name: "Diana", age: 28, salary: 95_000 }
 ]
 
-~"看 <data> 的结构，写一段 Ruby 代码存 <transform_code>：筛选 salary > 70000 的人，按 age 排序，返回 name 数组"
+~"look at <data> structure, write Ruby code that filters salary > 70000, sorts by age, and returns an array of names. Store in <transform_code>"
 
 result = eval(transform_code) # rubocop:disable Security/Eval
 puts result.inspect
