@@ -47,12 +47,12 @@ module Mana
       private
 
       def walk(node, &block)
-        stack = [node]
-        while (current = stack.pop)
+        queue = [node]
+        while (current = queue.shift)
           next unless current.respond_to?(:compact_child_nodes)
 
           block.call(current)
-          stack.concat(current.compact_child_nodes)
+          queue.concat(current.compact_child_nodes)
         end
       end
 
