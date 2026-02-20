@@ -166,10 +166,6 @@ Mana.define_effect :search_web,
 
 Built-in effects (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`) are reserved and cannot be overridden.
 
-# Or shorthand
-Mana.model = "claude-sonnet-4-20250514"
-```
-
 ### LLM-compiled methods
 
 `mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
