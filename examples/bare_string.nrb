@@ -1,5 +1,5 @@
 # Example: Bare string in .nrb file — no ~ needed
-# Load with: require "mana"; require_relative "bare_string"
+# Load with: require "mana"; Mana.load("examples/bare_string")
 
 numbers = [1, "2", "three", "cuatro", "五"]
 "算 <numbers> 的语义平均值存 <result>"

@@ -60,7 +60,7 @@ puts result
 ```ruby
 # main.rb
 require "mana"
-require_relative "math"  # auto-detects math.nrb
+Mana.load("math")  # loads math.nrb from same directory
 ```
 
 ### Variables
