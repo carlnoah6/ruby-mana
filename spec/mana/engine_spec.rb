@@ -96,5 +96,135 @@ RSpec.describe Mana::Engine do
       b = binding
       expect { Mana::Engine.run("fail", b) }.to raise_error(Mana::LLMError, /HTTP 500/)
     end
+
+    it "returns done result" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "finished" } }]
+      )
+
+      b = binding
+      result = Mana::Engine.run("do something", b)
+      expect(result).to eq("finished")
+    end
+
+    it "rejects invalid variable names in write_var" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "system('rm -rf /')", "value" => 1 } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      # Should not raise — error is caught and returned to LLM
+      expect { Mana::Engine.run("try injection", b) }.not_to raise_error
+    end
+
+    it "rejects invalid function names in call_func" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "eval('bad')", "args" => [] } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      expect { Mana::Engine.run("try injection", b) }.not_to raise_error
+    end
+
+    it "rejects invalid attr names in read_attr" do
+      klass = Struct.new(:name, keyword_init: true)
+      obj = klass.new(name: "test")
+
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "read_attr", input: { "obj" => "item", "attr" => "send('exit')" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      item = obj # rubocop:disable Lint/UselessAssignment
+      b = binding
+      expect { Mana::Engine.run("try injection", b) }.not_to raise_error
+    end
+
+    it "handles multiple tool calls in one response" do
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: JSON.generate({
+            content: [
+              { type: "tool_use", id: "t1", name: "write_var", input: { "name" => "a", "value" => 1 } },
+              { type: "tool_use", id: "t2", name: "write_var", input: { "name" => "b", "value" => 2 } }
+            ]
+          })
+        ).then
+        .to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: JSON.generate({
+            content: [{ type: "tool_use", id: "t3", name: "done", input: {} }]
+          })
+        )
+
+      b = binding
+      Mana::Engine.run("set a=1 and b=2", b)
+      expect(b.local_variable_get(:a)).to eq(1)
+      expect(b.local_variable_get(:b)).to eq(2)
+    end
+
+    it "handles unknown tool gracefully" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "nonexistent_tool", input: {} }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      expect { Mana::Engine.run("test", b) }.not_to raise_error
+    end
+  end
+
+  describe "#build_context" do
+    it "reads existing variables referenced in prompt" do
+      engine = Mana::Engine.new("use <x> and <y>", binding.tap { |b|
+        b.local_variable_set(:x, 42)
+        b.local_variable_set(:y, "hello")
+      })
+
+      ctx = engine.send(:build_context, "use <x> and <y>")
+      expect(ctx["x"]).to eq("42")
+      expect(ctx["y"]).to eq('"hello"')
+    end
+
+    it "skips variables that don't exist yet" do
+      b = binding
+      engine = Mana::Engine.new("store in <new_var>", b)
+      ctx = engine.send(:build_context, "store in <new_var>")
+      expect(ctx).to be_empty
+    end
+  end
+
+  describe "#serialize_value" do
+    let(:engine) { Mana::Engine.new("test", binding) }
+
+    it "serializes primitives" do
+      expect(engine.send(:serialize_value, 42)).to eq("42")
+      expect(engine.send(:serialize_value, 3.14)).to eq("3.14")
+      expect(engine.send(:serialize_value, "hello")).to eq('"hello"')
+      expect(engine.send(:serialize_value, true)).to eq("true")
+      expect(engine.send(:serialize_value, nil)).to eq("nil")
+    end
+
+    it "serializes arrays" do
+      expect(engine.send(:serialize_value, [1, "two", 3])).to eq('[1, "two", 3]')
+    end
+
+    it "serializes hashes" do
+      result = engine.send(:serialize_value, { a: 1 })
+      expect(result).to include('"a" => 1')
+    end
+
+    it "serializes custom objects via instance variables" do
+      klass = Struct.new(:name, :age, keyword_init: true)
+      obj = klass.new(name: "Alice", age: 30)
+      result = engine.send(:serialize_value, obj)
+      expect(result).to include("name")
+      expect(result).to include("Alice")
+    end
   end
 end
