@@ -1,0 +1,6 @@
+/.mana_cache/
+*.gem
+.bundle/
+pkg/
+tmp/
+coverage/

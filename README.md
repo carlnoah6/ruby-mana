@@ -141,6 +141,42 @@ end
 Mana.model = "claude-sonnet-4-20250514"
 ```
 
+### LLM-compiled methods
+
+`mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
+
+```ruby
+mana def fizzbuzz(n)
+  ~"return an array of FizzBuzz results from 1 to n"
+end
+
+fizzbuzz(15)  # first call → LLM generates code → cached → executed
+fizzbuzz(20)  # pure Ruby from .mana_cache/fizzbuzz.rb
+
+# View the generated source
+puts Mana.source(:fizzbuzz)
+# def fizzbuzz(n)
+#   (1..n).map do |i|
+#     if i % 15 == 0 then "FizzBuzz"
+#     elsif i % 3 == 0 then "Fizz"
+#     elsif i % 5 == 0 then "Buzz"
+#     else i.to_s
+#     end
+#   end
+# end
+
+# Works in classes too
+class Converter
+  include Mana::Mixin
+
+  mana def celsius_to_fahrenheit(c)
+    ~"convert Celsius to Fahrenheit"
+  end
+end
+```
+
+Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to skip LLM on CI).
+
 ## How it works
 
 1. `~"..."` calls `String#~@`, which captures the caller's `Binding`
