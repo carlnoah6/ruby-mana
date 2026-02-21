@@ -164,6 +164,13 @@ fizzbuzz(<span class="num">15</span>)  <span class="cmt"># generated once → ca
 <span class="ms">~"translate &lt;text2&gt;"</span>         <span class="cmt"># still remembers</span>
 Mana.memory.long_term       <span class="cmt"># =&gt; persists across runs</span></pre>
     </div>
+    <div class="slide">
+<pre><span class="cmt"># Nested prompts — LLM calling LLM</span>
+lint = ->(<span class="fn">code</span>) { <span class="ms">~"check #{code} for style issues, store in &lt;issues&gt;"</span> }
+
+<span class="ms">~"review &lt;codebase&gt;, call lint for each file, store in &lt;report&gt;"</span>
+puts report  <span class="cmt"># each nested call gets its own context</span></pre>
+    </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
 
@@ -229,6 +236,10 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
       <h3>🧠 Automatic memory</h3>
       <p>Short-term context shared across <code>~"..."</code> calls by default. Long-term memory persists to disk. <code>Mana.incognito</code> for clean-slate mode.</p>
     </div>
+    <div class="card">
+      <h3>🪆 Nested prompts</h3>
+      <p>Functions called by LLM can themselves use <code>~"..."</code>. Each nested call gets its own conversation context while sharing long-term memory.</p>
+    </div>
   </div>
 </section>
 
@@ -288,6 +299,21 @@ puts Mana.source(<span class="str">:fizzbuzz</span>)  <span class="cmt"># view t
   <div class="ex">
     <h3>Object manipulation</h3>
     <p>LLM reads and writes object attributes directly.</p>
+
+  <div class="ex">
+    <h3>Nested prompts</h3>
+    <p>Functions called by LLM can contain <code>~"..."</code> prompts. Each nested call gets isolated context.</p>
+<pre><span class="cmt"># Lambda style — concise</span>
+lint = ->(<span class="fn">code</span>) { <span class="ms">~"check #{code} for style issues, store in &lt;issues&gt;"</span> }
+<span class="cmt"># Equivalent to:
+# def lint(code)
+#   ~"check #{code} for style issues, store in &lt;issues&gt;"
+#   issues
+# end</span>
+
+<span class="ms">~"review &lt;codebase&gt;, call lint for each file, store report in &lt;report&gt;"</span>
+puts report  <span class="cmt"># outer LLM only sees return values, context stays clean</span></pre>
+  </div>
 
   <div class="ex">
     <h3>Memory — automatic context</h3>

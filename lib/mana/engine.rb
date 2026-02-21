@@ -120,6 +120,20 @@ module Mana
     end
 
     def execute
+      Thread.current[:mana_depth] ||= 0
+      Thread.current[:mana_depth] += 1
+      nested = Thread.current[:mana_depth] > 1
+
+      # Nested calls get fresh short-term memory but share long-term
+      if nested && !@incognito
+        outer_memory = Thread.current[:mana_memory]
+        inner_memory = Mana::Memory.new
+        long_term = outer_memory&.long_term || []
+        inner_memory.instance_variable_set(:@long_term, long_term)
+        inner_memory.instance_variable_set(:@next_id, (long_term.map { |m| m[:id] }.max || 0) + 1)
+        Thread.current[:mana_memory] = inner_memory
+      end
+
       context = build_context(@prompt)
       system_prompt = build_system_prompt(context)
 
@@ -162,10 +176,15 @@ module Mana
         messages << { role: "assistant", content: [{ type: "text", text: "Done: #{done_result}" }] }
       end
 
-      # Schedule compaction if needed (runs in background)
-      memory&.schedule_compaction
+      # Schedule compaction if needed (runs in background, skip for nested)
+      memory&.schedule_compaction unless nested
 
       done_result
+    ensure
+      if nested && !@incognito
+        Thread.current[:mana_memory] = outer_memory
+      end
+      Thread.current[:mana_depth] -= 1
     end
 
     private
@@ -298,7 +317,15 @@ module Mana
         func = input["name"]
         validate_name!(func)
         args = input["args"] || []
-        result = @binding.receiver.method(func.to_sym).call(*args)
+        # Try method first, then local variable (supports lambdas/procs)
+        callable = if @binding.receiver.respond_to?(func.to_sym, true)
+                     @binding.receiver.method(func.to_sym)
+                   elsif @binding.local_variables.include?(func.to_sym)
+                     @binding.local_variable_get(func.to_sym)
+                   else
+                     @binding.receiver.method(func.to_sym) # raise NameError
+                   end
+        result = callable.call(*args)
         serialize_value(result)
 
       when "remember"
