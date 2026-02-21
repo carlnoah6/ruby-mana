@@ -355,4 +355,130 @@ RSpec.describe "Nested prompts" do
       expect(Thread.current[:mana_depth]).to eq(0)
     end
   end
+
+  describe "lambda support" do
+    it "call_func can invoke a lambda defined as a local variable" do
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(
+          # First: call the lambda
+          {
+            status: 200,
+            headers: { "Content-Type" => "application/json" },
+            body: JSON.generate({
+              content: [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "my_lambda", "args" => ["world"] } }]
+            })
+          },
+          # Second: done
+          {
+            status: 200,
+            headers: { "Content-Type" => "application/json" },
+            body: JSON.generate({
+              content: [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "final" } }]
+            })
+          }
+        )
+
+      my_lambda = ->(name) { "hello #{name}" }
+      b = binding
+      result = Mana::Engine.run("call my_lambda", b)
+      expect(result).to eq("final")
+    end
+  end
+
+  describe "compaction" do
+    it "does not schedule compaction for nested calls" do
+      compaction_called = false
+      allow_any_instance_of(Mana::Memory).to receive(:schedule_compaction) do
+        compaction_called = true
+      end
+
+      call_count = 0
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return do
+          call_count += 1
+          if call_count == 1
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "nested_func", "args" => [] } }]
+              })
+            }
+          elsif call_count == 2
+            # Inner: done — should NOT trigger compaction
+            compaction_called = false # reset before inner finishes
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "inner" } }]
+              })
+            }
+          else
+            # Outer: done — SHOULD trigger compaction
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t3", name: "done", input: { "result" => "outer" } }]
+              })
+            }
+          end
+        end
+
+      def nested_func
+        Mana::Engine.run("inner", binding)
+      end
+
+      b = binding
+      Mana::Engine.run("outer", b)
+      # Compaction should have been called for the outer (top-level) call
+      expect(compaction_called).to be true
+    end
+  end
+
+  describe "incognito nesting" do
+    it "nested call inside incognito does not create memory" do
+      call_count = 0
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return do
+          call_count += 1
+          if call_count == 1
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "incognito_inner", "args" => [] } }]
+              })
+            }
+          elsif call_count == 2
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "inner" } }]
+              })
+            }
+          else
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t3", name: "done", input: { "result" => "outer" } }]
+              })
+            }
+          end
+        end
+
+      def incognito_inner
+        Mana::Engine.run("inner prompt", binding)
+      end
+
+      Thread.current[:mana_incognito] = true
+      b = binding
+      result = Mana::Engine.run("outer incognito", b)
+      expect(result).to eq("outer")
+      expect(Thread.current[:mana_depth]).to eq(0)
+    end
+  end
 end
