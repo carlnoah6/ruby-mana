@@ -43,7 +43,7 @@ RSpec.describe Mana::EffectRegistry do
     end
 
     it "rejects reserved effect names" do
-      %w[read_var write_var read_attr write_attr call_func done].each do |name|
+      %w[read_var write_var read_attr write_attr call_func done remember].each do |name|
         expect {
           described_class.define(name.to_sym) { "nope" }
         }.to raise_error(Mana::Error, /cannot override built-in/)

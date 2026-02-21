@@ -77,6 +77,16 @@ module Mana
       }
     ].freeze
 
+    REMEMBER_TOOL = {
+      name: "remember",
+      description: "Store a fact in long-term memory. This memory persists across script executions. Use when the user explicitly asks to remember something.",
+      input_schema: {
+        type: "object",
+        properties: { content: { type: "string", description: "The fact to remember" } },
+        required: ["content"]
+      }
+    }.freeze
+
     class << self
       def run(prompt, caller_binding)
         new(prompt, caller_binding).execute
@@ -93,9 +103,11 @@ module Mana
         handler_stack.pop
       end
 
-      # Built-in tools + any registered custom effects
+      # Built-in tools + remember + any registered custom effects
       def all_tools
-        TOOLS + Mana::EffectRegistry.tool_definitions
+        tools = TOOLS.dup
+        tools << REMEMBER_TOOL unless Memory.incognito?
+        tools + Mana::EffectRegistry.tool_definitions
       end
     end
 
@@ -104,15 +116,18 @@ module Mana
       @binding = caller_binding
       @config = Mana.config
       @caller_path = caller_source_path
+      @incognito = Memory.incognito?
     end
 
     def execute
       context = build_context(@prompt)
       system_prompt = build_system_prompt(context)
 
-      # Use session messages if inside Mana.session, otherwise start fresh
-      session = Mana::Session.current
-      messages = session ? session.messages : []
+      # Use memory's short_term messages (auto per-thread), or fresh if incognito
+      memory = @incognito ? nil : Memory.current
+      memory&.wait_for_compaction
+
+      messages = memory ? memory.short_term : []
       messages << { role: "user", content: @prompt }
 
       iterations = 0
@@ -132,7 +147,7 @@ module Mana
 
         # Process each tool use
         tool_results = tool_uses.map do |tu|
-          result = handle_effect(tu)
+          result = handle_effect(tu, memory)
           done_result = (tu[:input][:result] || tu[:input]["result"]) if tu[:name] == "done"
           { type: "tool_result", tool_use_id: tu[:id], content: result.to_s }
         end
@@ -142,10 +157,13 @@ module Mana
         break if tool_uses.any? { |t| t[:name] == "done" }
       end
 
-      # If in session, append a final assistant summary so LLM has full context
-      if session && done_result
+      # Append a final assistant summary so LLM has full context next call
+      if memory && done_result
         messages << { role: "assistant", content: [{ type: "text", text: "Done: #{done_result}" }] }
       end
+
+      # Schedule compaction if needed (runs in background)
+      memory&.schedule_compaction
 
       done_result
     end
@@ -181,6 +199,33 @@ module Mana
         "- Be precise with types: use numbers for numeric values, arrays for lists, strings for text."
       ]
 
+      # Inject long-term memories or incognito notice
+      if @incognito
+        parts << ""
+        parts << "You are in incognito mode. The remember tool is disabled. No memories will be loaded or saved."
+      else
+        memory = Memory.current
+        if memory
+          # Inject summaries from compaction
+          unless memory.summaries.empty?
+            parts << ""
+            parts << "Previous conversation summary:"
+            memory.summaries.each { |s| parts << "  #{s}" }
+          end
+
+          unless memory.long_term.empty?
+            parts << ""
+            parts << "Long-term memories (persistent across executions):"
+            memory.long_term.each { |m| parts << "- #{m[:content]}" }
+          end
+
+          unless memory.long_term.empty? && @incognito
+            parts << ""
+            parts << "You have a `remember` tool to store new facts in long-term memory when the user asks."
+          end
+        end
+      end
+
       unless context.empty?
         parts << ""
         parts << "Current variable values:"
@@ -214,7 +259,7 @@ module Mana
 
     # --- Effect Handling ---
 
-    def handle_effect(tool_use)
+    def handle_effect(tool_use, memory = nil)
       name = tool_use[:name]
       input = tool_use[:input] || {}
       # Normalize keys to strings for consistent access
@@ -255,6 +300,16 @@ module Mana
         args = input["args"] || []
         result = @binding.receiver.method(func.to_sym).call(*args)
         serialize_value(result)
+
+      when "remember"
+        if @incognito
+          "Memory not saved (incognito mode)"
+        elsif memory
+          entry = memory.remember(input["content"])
+          "Remembered (id=#{entry[:id]}): #{input['content']}"
+        else
+          "Memory not available"
+        end
 
       when "done"
         input["result"].to_s

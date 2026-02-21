@@ -3,7 +3,20 @@
 require "spec_helper"
 
 RSpec.describe Mana::Engine do
-  before { Mana.config.api_key = "test-key" }
+  before do
+    Mana.config.api_key = "test-key"
+    Thread.current[:mana_memory] = nil
+    Thread.current[:mana_incognito] = nil
+    @tmpdir = Dir.mktmpdir("mana_test")
+    Mana.config.memory_store = Mana::FileStore.new(@tmpdir)
+  end
+
+  after do
+    Thread.current[:mana_memory] = nil
+    Thread.current[:mana_incognito] = nil
+    FileUtils.rm_rf(@tmpdir)
+    Mana.reset!
+  end
 
   describe ".run" do
     it "handles write_var to create new variables" do
@@ -177,6 +190,34 @@ RSpec.describe Mana::Engine do
       b = binding
       expect { Mana::Engine.run("test", b) }.not_to raise_error
     end
+
+    it "handles remember tool" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "remember", input: { "content" => "user likes Ruby" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      Mana::Engine.run("remember I like Ruby", b)
+      expect(Mana.memory.long_term.size).to eq(1)
+      expect(Mana.memory.long_term.first[:content]).to eq("user likes Ruby")
+    end
+
+    it "blocks remember in incognito mode" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "remember", input: { "content" => "secret" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      Mana::Memory.incognito do
+        b = binding
+        Mana::Engine.run("remember this", b)
+      end
+
+      # Create memory after incognito — should be empty
+      memory = Mana.memory
+      expect(memory.long_term).to be_empty
+    end
   end
 
   describe "#build_context" do
@@ -268,6 +309,30 @@ RSpec.describe Mana::Engine do
       names = tools.map { |t| t[:name] }
       expect(names).to include("custom_tool")
       expect(names).to include("read_var") # built-ins still there
+      expect(names).to include("remember") # remember tool present
+    end
+
+    it "excludes remember tool in incognito mode" do
+      Mana::Memory.incognito do
+        tools = Mana::Engine.all_tools
+        names = tools.map { |t| t[:name] }
+        expect(names).not_to include("remember")
+        expect(names).to include("read_var") # built-ins still there
+      end
+    end
+  end
+
+  describe ".all_tools" do
+    it "includes remember tool normally" do
+      names = described_class.all_tools.map { |t| t[:name] }
+      expect(names).to include("remember")
+    end
+
+    it "excludes remember tool in incognito" do
+      Mana::Memory.incognito do
+        names = described_class.all_tools.map { |t| t[:name] }
+        expect(names).not_to include("remember")
+      end
     end
   end
 end

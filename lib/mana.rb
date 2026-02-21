@@ -3,7 +3,10 @@
 require_relative "mana/version"
 require_relative "mana/config"
 require_relative "mana/effect_registry"
-require_relative "mana/session"
+require_relative "mana/namespace"
+require_relative "mana/memory_store"
+require_relative "mana/context_window"
+require_relative "mana/memory"
 require_relative "mana/engine"
 require_relative "mana/introspect"
 require_relative "mana/compiler"
@@ -36,6 +39,7 @@ module Mana
     def reset!
       @config = Config.new
       EffectRegistry.clear!
+      Thread.current[:mana_memory] = nil
     end
 
     # Define a custom effect that becomes an LLM tool
@@ -48,9 +52,14 @@ module Mana
       EffectRegistry.undefine(name)
     end
 
-    # Run a block with shared conversation context
-    def session(&block)
-      Session.run(&block)
+    # Access current thread's memory
+    def memory
+      Memory.current
+    end
+
+    # Run a block in incognito mode (no memory)
+    def incognito(&block)
+      Memory.incognito(&block)
     end
 
     # View generated source for a mana-compiled method

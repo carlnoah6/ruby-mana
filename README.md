@@ -135,6 +135,14 @@ Mana.configure do |c|
   c.temperature = 0
   c.api_key = ENV["ANTHROPIC_API_KEY"]
   c.max_iterations = 50
+
+  # Memory settings
+  c.namespace = "my-project"      # nil = auto-detect from git/pwd
+  c.context_window = 200_000      # nil = auto-detect from model
+  c.memory_pressure = 0.7         # compact when tokens exceed 70% of context window
+  c.memory_keep_recent = 4        # keep last 4 rounds during compaction
+  c.compact_model = nil           # nil = use main model for compaction
+  c.memory_store = Mana::FileStore.new  # default file-based persistence
 end
 ```
 
@@ -166,20 +174,48 @@ Mana.define_effect :search_web,
 
 Built-in effects (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`) are reserved and cannot be overridden.
 
-### Sessions — shared context
+### Memory — automatic context sharing
 
-By default each `~"..."` starts fresh. Wrap multiple calls in `Mana.session` to share conversation context:
+Consecutive `~"..."` calls automatically share context. No wrapper block needed:
 
 ```ruby
-Mana.session do
-  ~"remember: always translate to Japanese, casual tone"
-  ~"translate <text1>, store in <result1>"   # uses the preference
-  ~"translate <text2>, store in <result2>"   # still remembers
-  ~"which translation was harder? store in <analysis>"  # can reference both
-end
+~"remember: always translate to Japanese, casual tone"
+~"translate <text1>, store in <result1>"   # uses the preference
+~"translate <text2>, store in <result2>"   # still remembers
+~"which translation was harder? store in <analysis>"  # can reference both
 ```
 
-Outside the session block, context resets.
+Memory is per-thread and auto-created on the first `~"..."` call.
+
+#### Long-term memory
+
+The LLM has a `remember` tool that persists facts across script executions:
+
+```ruby
+~"remember that the user prefers concise output"
+# ... later, in a different script execution ...
+~"translate <text>"  # LLM sees the preference in its long-term memory
+```
+
+Manage long-term memory via Ruby:
+
+```ruby
+Mana.memory.long_term          # view all memories
+Mana.memory.forget(id: 2)     # remove a specific memory
+Mana.memory.clear_long_term!   # clear all long-term memories
+Mana.memory.clear_short_term!  # clear conversation history
+Mana.memory.clear!             # clear everything
+```
+
+#### Incognito mode
+
+Run without any memory — nothing is loaded or saved:
+
+```ruby
+Mana.incognito do
+  ~"translate <text>"  # no memory, no persistence
+end
+```
 
 ### LLM-compiled methods
 
@@ -221,9 +257,11 @@ Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to s
 
 1. `~"..."` calls `String#~@`, which captures the caller's `Binding`
 2. Mana parses `<var>` references and reads existing variables as context
-3. The prompt + context is sent to the LLM with tools: `read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`
-4. LLM responds with tool calls → Mana executes them against the live Ruby binding → sends results back
-5. Loop until LLM calls `done` or returns without tool calls
+3. Memory loads long-term facts and prior conversation into the system prompt
+4. The prompt + context is sent to the LLM with tools: `read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `remember`, `done`
+5. LLM responds with tool calls → Mana executes them against the live Ruby binding → sends results back
+6. Loop until LLM calls `done` or returns without tool calls
+7. After completion, memory compaction runs in background if context is getting large
 
 ## Safety
 
