@@ -119,7 +119,7 @@
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
   <div class="badges">
     <span class="badge">Ruby 3.3+</span>
-    <span class="badge">Anthropic Claude</span>
+    <span class="badge">Multi-LLM</span>
     <span class="badge">MIT License</span>
   </div>
 
@@ -178,6 +178,15 @@ puts report  <span class="cmt"># each nested call gets its own context</span></p
 mock_prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
 mock_prompt(<span class="str">/translate/</span>) { |p| { output: <span class="str">"hola"</span> } }
 <span class="cmt"># ~"..." calls match stubs, never hit the API</span></pre>
+    </div>
+    <div class="slide">
+<pre><span class="cmt"># Multi-LLM — Anthropic, OpenAI, Ollama, and more</span>
+Mana.configure <span class="kw">do</span> |c|
+  c.api_key = ENV[<span class="str">"OPENAI_API_KEY"</span>]
+  c.base_url = <span class="str">"https://api.openai.com"</span>
+  c.model = <span class="str">"gpt-4o"</span>
+<span class="kw">end</span>
+<span class="cmt"># auto-detects backend from model name</span></pre>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
@@ -251,6 +260,10 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
     <div class="card">
       <h3>🧪 Test mode</h3>
       <p>Stub LLM responses with <code>mock_prompt</code>. String or regex matching, block-based dynamic values. Zero API calls in tests.</p>
+    </div>
+    <div class="card">
+      <h3>🔌 Multi-LLM backends</h3>
+      <p>Anthropic and OpenAI-compatible APIs out of the box. Works with Ollama, DeepSeek, Groq, and more. Auto-detects backend from model name.</p>
     </div>
   </div>
 </section>
@@ -412,7 +425,7 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   <h2>Install</h2>
   <div class="ib"><code><span class="d">$ </span>gem install ruby-mana</code></div>
   <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Or in your Gemfile: <code>gem "ruby-mana"</code></p>
-  <p style="color:var(--dim);font-size:.9rem">Requires Ruby 3.3+ and <code>ANTHROPIC_API_KEY</code> environment variable.</p>
+  <p style="color:var(--dim);font-size:.9rem">Requires Ruby 3.3+ and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
 </section>
 
 <!-- Research -->
