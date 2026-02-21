@@ -109,7 +109,11 @@ module Mana
     def execute
       context = build_context(@prompt)
       system_prompt = build_system_prompt(context)
-      messages = [{ role: "user", content: @prompt }]
+
+      # Use session messages if inside Mana.session, otherwise start fresh
+      session = Mana::Session.current
+      messages = session ? session.messages : []
+      messages << { role: "user", content: @prompt }
 
       iterations = 0
       done_result = nil
@@ -136,6 +140,11 @@ module Mana
         messages << { role: "user", content: tool_results }
 
         break if tool_uses.any? { |t| t[:name] == "done" }
+      end
+
+      # If in session, append a final assistant summary so LLM has full context
+      if session && done_result
+        messages << { role: "assistant", content: [{ type: "text", text: "Done: #{done_result}" }] }
       end
 
       done_result
