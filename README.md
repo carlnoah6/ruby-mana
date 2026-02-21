@@ -217,6 +217,47 @@ Mana.incognito do
 end
 ```
 
+### Testing
+
+Use `Mana.mock` to test code that uses `~"..."` without calling any API:
+
+```ruby
+require "mana/test"
+
+RSpec.describe MyApp do
+  include Mana::TestHelpers
+
+  it "analyzes code" do
+    mock_prompt "analyze", bugs: ["XSS"], score: 8.5
+
+    result = MyApp.analyze("user_input")
+    expect(result[:bugs]).to include("XSS")
+  end
+
+  it "translates with dynamic response" do
+    mock_prompt(/translate.*to\s+\w+/) do |prompt|
+      { output: prompt.include?("Chinese") ? "你好" : "hello" }
+    end
+
+    expect(MyApp.translate("hi", "Chinese")).to eq("你好")
+  end
+end
+```
+
+Block mode for inline tests:
+
+```ruby
+Mana.mock do
+  prompt "summarize", summary: "A brief overview"
+
+  text = "Long article..."
+  ~"summarize <text> and store in <summary>"
+  puts summary  # => "A brief overview"
+end
+```
+
+Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the stub to add.
+
 ### Nested prompts
 
 Functions called by LLM can themselves contain `~"..."` prompts:

@@ -120,6 +120,9 @@ module Mana
     end
 
     def execute
+      # Mock mode: match prompt and return stubbed values, no API calls
+      return handle_mock(@prompt) if Mana.mock_active?
+
       Thread.current[:mana_depth] ||= 0
       Thread.current[:mana_depth] += 1
       nested = Thread.current[:mana_depth] > 1
@@ -184,10 +187,45 @@ module Mana
       if nested && !@incognito
         Thread.current[:mana_memory] = outer_memory
       end
-      Thread.current[:mana_depth] -= 1
+      Thread.current[:mana_depth] -= 1 if Thread.current[:mana_depth]
     end
 
     private
+
+    # --- Mock Handling ---
+
+    def handle_mock(prompt)
+      mock = Mana.current_mock
+      stub = mock.match(prompt)
+
+      unless stub
+        truncated = prompt.length > 60 ? "#{prompt[0..57]}..." : prompt
+        raise MockError, "No mock matched: \"#{truncated}\"\n  Add: mock_prompt \"#{truncated}\", _return: \"...\""
+      end
+
+      values = if stub.block
+        stub.block.call(prompt)
+      else
+        stub.values.dup
+      end
+
+      return_value = values.delete(:_return)
+
+      values.each do |name, value|
+        write_local(name.to_s, value)
+      end
+
+      # Record in short-term memory if not incognito
+      if !@incognito
+        memory = Memory.current
+        if memory
+          memory.short_term << { role: "user", content: prompt }
+          memory.short_term << { role: "assistant", content: [{ type: "text", text: "Done: #{return_value || values.inspect}" }] }
+        end
+      end
+
+      return_value || values.values.first
+    end
 
     # --- Context Building ---
 
