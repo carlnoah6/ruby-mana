@@ -128,7 +128,9 @@ module Mana
       if nested && !@incognito
         outer_memory = Thread.current[:mana_memory]
         inner_memory = Mana::Memory.new
-        inner_memory.instance_variable_set(:@long_term, outer_memory&.long_term || [])
+        long_term = outer_memory&.long_term || []
+        inner_memory.instance_variable_set(:@long_term, long_term)
+        inner_memory.instance_variable_set(:@next_id, (long_term.map { |m| m[:id] }.max || 0) + 1)
         Thread.current[:mana_memory] = inner_memory
       end
 
@@ -315,7 +317,15 @@ module Mana
         func = input["name"]
         validate_name!(func)
         args = input["args"] || []
-        result = @binding.receiver.method(func.to_sym).call(*args)
+        # Try method first, then local variable (supports lambdas/procs)
+        callable = if @binding.receiver.respond_to?(func.to_sym, true)
+                     @binding.receiver.method(func.to_sym)
+                   elsif @binding.local_variables.include?(func.to_sym)
+                     @binding.local_variable_get(func.to_sym)
+                   else
+                     @binding.receiver.method(func.to_sym) # raise NameError
+                   end
+        result = callable.call(*args)
         serialize_value(result)
 
       when "remember"
