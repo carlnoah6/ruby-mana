@@ -219,7 +219,7 @@ module Mana
             memory.long_term.each { |m| parts << "- #{m[:content]}" }
           end
 
-          unless memory.long_term.empty? && @incognito
+          unless memory.long_term.empty?
             parts << ""
             parts << "You have a `remember` tool to store new facts in long-term memory when the user asks."
           end
