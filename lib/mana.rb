@@ -3,6 +3,7 @@
 require_relative "mana/version"
 require_relative "mana/config"
 require_relative "mana/effect_registry"
+require_relative "mana/session"
 require_relative "mana/engine"
 require_relative "mana/introspect"
 require_relative "mana/compiler"
@@ -45,6 +46,11 @@ module Mana
     # Remove a custom effect
     def undefine_effect(name)
       EffectRegistry.undefine(name)
+    end
+
+    # Run a block with shared conversation context
+    def session(&block)
+      Session.run(&block)
     end
 
     # View generated source for a mana-compiled method

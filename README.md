@@ -166,6 +166,21 @@ Mana.define_effect :search_web,
 
 Built-in effects (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`) are reserved and cannot be overridden.
 
+### Sessions — shared context
+
+By default each `~"..."` starts fresh. Wrap multiple calls in `Mana.session` to share conversation context:
+
+```ruby
+Mana.session do
+  ~"remember: always translate to Japanese, casual tone"
+  ~"translate <text1>, store in <result1>"   # uses the preference
+  ~"translate <text2>, store in <result2>"   # still remembers
+  ~"which translation was harder? store in <analysis>"  # can reference both
+end
+```
+
+Outside the session block, context resets.
+
 ### LLM-compiled methods
 
 `mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
