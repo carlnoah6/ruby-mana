@@ -217,6 +217,23 @@ Mana.incognito do
 end
 ```
 
+### Nested prompts
+
+Functions called by LLM can themselves contain `~"..."` prompts:
+
+```ruby
+lint = ->(code) { ~"check #{code} for style issues, store in <issues>" }
+# Equivalent to:
+# def lint(code)
+#   ~"check #{code} for style issues, store in <issues>"
+#   issues
+# end
+
+~"review <codebase>, call lint for each file, store report in <report>"
+```
+
+Each nested call gets its own conversation context. The outer LLM only sees the function's return value, keeping its context clean.
+
 ### LLM-compiled methods
 
 `mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
