@@ -2,6 +2,10 @@
 
 require_relative "mana/version"
 require_relative "mana/config"
+require_relative "mana/backends/base"
+require_relative "mana/backends/anthropic"
+require_relative "mana/backends/openai"
+require_relative "mana/backends/registry"
 require_relative "mana/effect_registry"
 require_relative "mana/namespace"
 require_relative "mana/memory_store"
