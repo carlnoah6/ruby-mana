@@ -157,6 +157,13 @@ fizzbuzz(<span class="num">15</span>)  <span class="cmt"># generated once → ca
 <span class="kw">end</span>
 <span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span></pre>
     </div>
+    <div class="slide">
+<pre><span class="cmt"># Memory is automatic — no session blocks needed</span>
+<span class="ms">~"remember: user prefers concise style"</span>
+<span class="ms">~"translate &lt;text&gt;"</span>          <span class="cmt"># remembers the preference</span>
+<span class="ms">~"translate &lt;text2&gt;"</span>         <span class="cmt"># still remembers</span>
+Mana.memory.long_term       <span class="cmt"># =&gt; persists across runs</span></pre>
+    </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
 
@@ -218,6 +225,10 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
       <h3>🛡️ Effect system</h3>
       <p>Built on algebraic effects theory. 6 built-in effects (read/write var, read/write attr, call func, done) + unlimited custom effects.</p>
     </div>
+    <div class="card">
+      <h3>🧠 Automatic memory</h3>
+      <p>Short-term context shared across <code>~"..."</code> calls by default. Long-term memory persists to disk. <code>Mana.incognito</code> for clean-slate mode.</p>
+    </div>
   </div>
 </section>
 
@@ -272,6 +283,28 @@ fizzbuzz(<span class="num">15</span>)  <span class="cmt"># first call → LLM ge
 fizzbuzz(<span class="num">20</span>)  <span class="cmt"># pure Ruby, zero API cost</span>
 
 puts Mana.source(<span class="str">:fizzbuzz</span>)  <span class="cmt"># view the generated code</span></pre>
+  </div>
+
+  <div class="ex">
+    <h3>Object manipulation</h3>
+    <p>LLM reads and writes object attributes directly.</p>
+
+  <div class="ex">
+    <h3>Memory — automatic context</h3>
+    <p>Consecutive calls share context by default. Use <code>remember</code> for persistent long-term memory.</p>
+<pre><span class="cmt"># Memory is automatic — no session blocks</span>
+<span class="ms">~"remember: always use British English"</span>
+<span class="ms">~"translate &lt;text&gt; to English"</span>   <span class="cmt"># uses British English</span>
+<span class="ms">~"translate &lt;text2&gt; to English"</span>  <span class="cmt"># still remembers</span>
+
+<span class="cmt"># Long-term memory persists across script runs</span>
+Mana.memory                     <span class="cmt"># inspect memory state</span>
+Mana.memory.forget(id: <span class="num">1</span>)      <span class="cmt"># remove a specific memory</span>
+
+<span class="cmt"># Incognito mode — clean slate</span>
+Mana.incognito <span class="kw">do</span>
+  <span class="ms">~"translate &lt;text3&gt;"</span>           <span class="cmt"># no memory loaded or saved</span>
+<span class="kw">end</span></pre>
   </div>
 
   <div class="ex">
