@@ -17,6 +17,7 @@ module Mana
   class Error < StandardError; end
   class MaxIterationsError < Error; end
   class LLMError < Error; end
+  class MockError < Error; end
 
   class << self
     def config
@@ -40,6 +41,7 @@ module Mana
       @config = Config.new
       EffectRegistry.clear!
       Thread.current[:mana_memory] = nil
+      Thread.current[:mana_mock] = nil
     end
 
     # Define a custom effect that becomes an LLM tool
@@ -73,3 +75,5 @@ module Mana
     end
   end
 end
+
+require_relative "mana/mock"

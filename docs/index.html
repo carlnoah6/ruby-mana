@@ -171,6 +171,14 @@ lint = ->(<span class="fn">code</span>) { <span class="ms">~"check #{code} for s
 <span class="ms">~"review &lt;codebase&gt;, call lint for each file, store in &lt;report&gt;"</span>
 puts report  <span class="cmt"># each nested call gets its own context</span></pre>
     </div>
+    <div class="slide">
+<pre><span class="cmt"># Test mode — no API calls needed</span>
+<span class="kw">require</span> <span class="str">"mana/test"</span>
+
+mock_prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
+mock_prompt(<span class="str">/translate/</span>) { |p| { output: <span class="str">"hola"</span> } }
+<span class="cmt"># ~"..." calls match stubs, never hit the API</span></pre>
+    </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
 
@@ -239,6 +247,10 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
     <div class="card">
       <h3>🪆 Nested prompts</h3>
       <p>Functions called by LLM can themselves use <code>~"..."</code>. Each nested call gets its own conversation context while sharing long-term memory.</p>
+    </div>
+    <div class="card">
+      <h3>🧪 Test mode</h3>
+      <p>Stub LLM responses with <code>mock_prompt</code>. String or regex matching, block-based dynamic values. Zero API calls in tests.</p>
     </div>
   </div>
 </section>
@@ -330,6 +342,23 @@ Mana.memory.forget(id: <span class="num">1</span>)      <span class="cmt"># remo
 <span class="cmt"># Incognito mode — clean slate</span>
 Mana.incognito <span class="kw">do</span>
   <span class="ms">~"translate &lt;text3&gt;"</span>           <span class="cmt"># no memory loaded or saved</span>
+<span class="kw">end</span></pre>
+  </div>
+
+  <div class="ex">
+    <h3>Testing — mock mode</h3>
+    <p>Stub LLM responses by pattern. No API key or network needed in tests.</p>
+<pre><span class="kw">require</span> <span class="str">"mana/test"</span>
+
+RSpec.describe MyApp <span class="kw">do</span>
+  include Mana::TestHelpers
+
+  it <span class="str">"analyzes code"</span> <span class="kw">do</span>
+    mock_prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
+
+    result = MyApp.analyze(<span class="str">"input"</span>)
+    expect(result[:bugs]).to include(<span class="str">"XSS"</span>)
+  <span class="kw">end</span>
 <span class="kw">end</span></pre>
   </div>
 
