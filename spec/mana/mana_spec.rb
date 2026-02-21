@@ -52,9 +52,9 @@ RSpec.describe Mana do
 
     it "clears custom effects" do
       Mana.define_effect(:test_effect, description: "test") { "result" }
-      expect(Mana::EffectRegistry.all).not_to be_empty
+      expect(Mana::EffectRegistry.tool_definitions).not_to be_empty
       Mana.reset!
-      expect(Mana::EffectRegistry.all).to be_empty
+      expect(Mana::EffectRegistry.tool_definitions).to be_empty
     end
   end
 
@@ -85,10 +85,10 @@ RSpec.describe Mana do
 
     it "registers and removes custom effects" do
       Mana.define_effect(:my_tool, description: "does stuff") { |params| params }
-      expect(Mana::EffectRegistry.all.map { |t| t[:name] }).to include("my_tool")
+      expect(Mana::EffectRegistry.tool_definitions.map { |t| t[:name] }).to include("my_tool")
 
       Mana.undefine_effect(:my_tool)
-      expect(Mana::EffectRegistry.all.map { |t| t[:name] }).not_to include("my_tool")
+      expect(Mana::EffectRegistry.tool_definitions.map { |t| t[:name] }).not_to include("my_tool")
     end
   end
 

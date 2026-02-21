@@ -26,17 +26,32 @@ RSpec.describe Mana::Mixin do
 
   describe "mana def" do
     it "compiles a method via LLM and caches it" do
+      call_count = 0
       stub_request(:post, "https://api.anthropic.com/v1/messages")
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({
-            content: [
-              { type: "tool_use", id: "t1", name: "done",
-                input: { "result" => "def double(n)\n  n * 2\nend" } }
-            ]
-          })
-        )
+        .to_return do
+          call_count += 1
+          if call_count == 1
+            # LLM writes the code to <code> variable
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t1", name: "write_var",
+                  input: { "name" => "code", "value" => "def double(n)\n  n * 2\nend" } }]
+              })
+            }
+          else
+            # Then done
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t2", name: "done",
+                  input: { "result" => "def double(n)\n  n * 2\nend" } }]
+              })
+            }
+          end
+        end
 
       klass = Class.new do
         include Mana::Mixin
