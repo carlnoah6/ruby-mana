@@ -104,7 +104,7 @@ module Mana
       end
     end
 
-    RESERVED_EFFECTS = %w[read_var write_var read_attr write_attr call_func done].freeze
+    RESERVED_EFFECTS = %w[read_var write_var read_attr write_attr call_func done remember].freeze
 
     class << self
       def registry
