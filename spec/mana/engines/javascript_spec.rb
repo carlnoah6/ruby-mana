@@ -6,10 +6,12 @@ require "mana/engines/javascript"
 RSpec.describe Mana::Engines::JavaScript do
   before do
     described_class.reset!
+    Mana::EffectRegistry.clear!
   end
 
   after do
     described_class.reset!
+    Mana::EffectRegistry.clear!
   end
 
   def run_js(code, bnd = binding)
@@ -88,6 +90,167 @@ RSpec.describe Mana::Engines::JavaScript do
     end
   end
 
+  describe "bidirectional calling: ruby.read / ruby.write" do
+    it "reads a Ruby variable from JS via ruby.read" do
+      x = 42
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute('ruby.read("x")')
+      expect(result).to eq(42)
+    end
+
+    it "writes a Ruby variable from JS via ruby.write" do
+      x = 0
+      b = binding
+      engine = described_class.new(b)
+      engine.execute('ruby.write("x", 99)')
+      expect(b.local_variable_get(:x)).to eq(99)
+    end
+
+    it "reads and writes in a single JS expression" do
+      counter = 10
+      b = binding
+      engine = described_class.new(b)
+      engine.execute('ruby.write("counter", ruby.read("counter") + 5)')
+      expect(b.local_variable_get(:counter)).to eq(15)
+    end
+
+    it "reads complex types (arrays, hashes)" do
+      data = [1, 2, 3]
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute('ruby.read("data")')
+      expect(result).to eq([1, 2, 3])
+    end
+
+    it "returns null for undefined variables" do
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute('ruby.read("nonexistent")')
+      expect(result).to be_nil
+    end
+  end
+
+  describe "bidirectional calling: Ruby methods from JS" do
+    let(:test_class) do
+      Class.new do
+        def greet(name)
+          "Hello, #{name}!"
+        end
+
+        def add(a, b)
+          a + b
+        end
+
+        def get_data
+          { "items" => [1, 2, 3], "count" => 3 }
+        end
+      end
+    end
+
+    it "calls a Ruby method with one argument" do
+      obj = test_class.new
+      b = obj.instance_eval { binding }
+      engine = described_class.new(b)
+      result = engine.execute('ruby.greet("world")')
+      expect(result).to eq("Hello, world!")
+    end
+
+    it "calls a Ruby method with multiple arguments" do
+      obj = test_class.new
+      b = obj.instance_eval { binding }
+      engine = described_class.new(b)
+      result = engine.execute("ruby.add(10, 20)")
+      expect(result).to eq(30)
+    end
+
+    it "returns complex types from Ruby methods" do
+      obj = test_class.new
+      b = obj.instance_eval { binding }
+      engine = described_class.new(b)
+      result = engine.execute('JSON.stringify(ruby.get_data())')
+      parsed = JSON.parse(result)
+      expect(parsed["items"]).to eq([1, 2, 3])
+      expect(parsed["count"]).to eq(3)
+    end
+
+    it "uses Ruby method results in JS computation" do
+      obj = test_class.new
+      b = obj.instance_eval { binding }
+      engine = described_class.new(b)
+      engine.execute("const doubled = ruby.add(5, 5) * 2")
+      expect(b.local_variable_get(:doubled)).to eq(20)
+    end
+  end
+
+  describe "bidirectional calling: Mana effects from JS" do
+    it "calls a registered effect from JS" do
+      Mana.define_effect :double_it, description: "Double a number" do |n:|
+        n.to_i * 2
+      end
+
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("ruby.double_it(21)")
+      expect(result).to eq(42)
+    end
+
+    it "calls an effect with multiple params" do
+      Mana.define_effect :concat, description: "Concat strings" do |a:, b:|
+        "#{a}-#{b}"
+      end
+
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute('ruby.concat("hello", "world")')
+      expect(result).to eq("hello-world")
+    end
+
+    it "calls an effect with a hash argument" do
+      Mana.define_effect :lookup, description: "Lookup by key" do |key:|
+        { "a" => 1, "b" => 2 }[key]
+      end
+
+      b = binding
+      engine = described_class.new(b)
+      # Pass a JS object — mini_racer converts it to a Ruby Hash
+      result = engine.execute('ruby.lookup({"key": "a"})')
+      expect(result).to eq(1)
+    end
+
+    it "uses effect results in JS computation" do
+      Mana.define_effect :fetch_price, description: "Get price" do |item:|
+        case item
+        when "apple" then 1.5
+        when "banana" then 0.75
+        else 0
+        end
+      end
+
+      b = binding
+      engine = described_class.new(b)
+      engine.execute('const total = ruby.fetch_price("apple") + ruby.fetch_price("banana")')
+      expect(b.local_variable_get(:total)).to eq(2.25)
+    end
+  end
+
+  describe "bidirectional calling: error handling" do
+    let(:error_class) do
+      Class.new do
+        def fail_hard
+          raise "intentional error"
+        end
+      end
+    end
+
+    it "propagates Ruby exceptions to JS" do
+      obj = error_class.new
+      b = obj.instance_eval { binding }
+      engine = described_class.new(b)
+      expect { engine.execute("ruby.fail_hard()") }.to raise_error(RuntimeError, /intentional error/)
+    end
+  end
+
   describe "persistent context" do
     it "retains variables across calls in same thread" do
       b = binding
@@ -107,6 +270,17 @@ RSpec.describe Mana::Engines::JavaScript do
       engine2 = described_class.new(b)
       result = engine2.execute("add(3, 4)")
       expect(result).to eq(7)
+    end
+
+    it "retains ruby.* callbacks across calls" do
+      x = 1
+      b = binding
+      engine = described_class.new(b)
+      engine.execute('ruby.write("x", 10)')
+
+      engine2 = described_class.new(b)
+      result = engine2.execute('ruby.read("x")')
+      expect(result).to eq(10)
     end
   end
 
@@ -142,6 +316,19 @@ RSpec.describe Mana::Engines::JavaScript do
       described_class.reset!
 
       expect { described_class.context.eval("resetTest") }.to raise_error(MiniRacer::RuntimeError)
+    end
+
+    it "clears attached callbacks so they can be re-attached" do
+      b = binding
+      engine = described_class.new(b)
+      engine.execute('ruby.read("b")') # attaches callbacks
+
+      described_class.reset!
+
+      # After reset, new context should get fresh callbacks
+      b2 = binding
+      engine2 = described_class.new(b2)
+      expect { engine2.execute('ruby.read("b2")') }.not_to raise_error
     end
   end
 
@@ -191,9 +378,7 @@ RSpec.describe Mana::Engines::JavaScript do
     it "skips unserializable Ruby variables gracefully" do
       b = binding
       b.local_variable_set(:good, 42)
-      # Complex objects get serialized to string via Base#serialize
       engine = described_class.new(b)
-      # Should not raise
       expect { engine.execute("const val = good + 1") }.not_to raise_error
     end
   end
