@@ -57,3 +57,29 @@ puts "Doubled via Ruby proc: #{result}"
 score = 0
 ~"ruby.write('score', ruby.read('score') + 100)"
 puts "Score after Python update: #{score}"
+
+puts "\n=== Bidirectional: JS calls Ruby ==="
+
+# Define a Ruby method that JS can call
+def celsius_to_fahrenheit(c)
+  c * 9.0 / 5 + 32
+end
+
+# JS calls Ruby method, uses result in JS computation
+~"const temps_c2 = [0, 20, 37, 100]"
+~"const temps_f2 = temps_c2.map(c => ruby.celsius_to_fahrenheit(c))"
+puts "Fahrenheit (JS): #{temps_f2}"
+
+# Define a Mana effect (custom tool) callable from JS
+Mana.define_effect :fetch_price, description: "Get item price" do |item:|
+  prices = { "apple" => 1.5, "banana" => 0.75, "cherry" => 3.0 }
+  prices[item] || 0
+end
+
+~"const total = ruby.fetch_price('apple') + ruby.fetch_price('banana')"
+puts "Total price: $#{total}"
+
+# JS reads/writes Ruby variables dynamically
+js_score = 0
+~"ruby.write('js_score', ruby.read('js_score') + 100)"
+puts "Score after JS update: #{js_score}"
