@@ -28,6 +28,7 @@ module Mana
           PyCall.exec("pass") # ensure interpreter is alive
           Thread.current[:mana_py_namespace] = nil
         end
+        ObjectRegistry.reset!
       end
 
       def execute(code)
@@ -112,8 +113,9 @@ module Mana
       end
 
       # Serialize Ruby values for Python injection.
-      # Procs/lambdas and Ruby objects are passed directly --
-      # PyCall wraps them so Python can call their methods.
+      # Simple types are copied. Complex objects are passed directly via PyCall
+      # (which wraps them so Python can call their methods) AND registered in
+      # the ObjectRegistry for lifecycle tracking.
       def serialize_for_py(value)
         case value
         when Numeric, String, TrueClass, FalseClass, NilClass
@@ -128,10 +130,12 @@ module Mana
             h[key] = serialize_for_py(v)
           end
         when Proc, Method
-          # Pass callables directly -- PyCall wraps them as Python callables
+          # Register callables for tracking, pass directly via PyCall
+          ObjectRegistry.current.register(value)
           value
         else
-          # Pass Ruby objects directly -- Python can call their methods via PyCall
+          # Register complex objects for tracking, pass directly via PyCall
+          ObjectRegistry.current.register(value)
           value
         end
       end
