@@ -214,8 +214,9 @@ RSpec.describe Mana::Engines::Python do
         unused = 20
         b = binding
         engine = described_class.new(b)
-        engine.execute("result = used + 1")
+        engine.execute("result = used + 1\nunused_present = 'unused' in globals()")
         expect(b.local_variable_get(:result)).to eq(11)
+        expect(b.local_variable_get(:unused_present)).to eq(false)
       end
     end
 

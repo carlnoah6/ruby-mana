@@ -7,6 +7,7 @@ rescue LoadError
 end
 
 require "json"
+require "set"
 
 module Mana
   module Engines
@@ -146,7 +147,7 @@ module Mana
             raise "Remote reference #{ref_id} has been released" unless obj
 
             args = args_json ? JSON.parse(args_json) : []
-            result = obj.send(method_name.to_sym, *args)
+            result = obj.public_send(method_name.to_sym, *args)
             json_safe(result)
           })
           attached << "ruby.__ref_call"
@@ -187,7 +188,7 @@ module Mana
           next if attached.include?(key)
 
           recv = receiver
-          ctx.attach(key, proc { |*args| json_safe(recv.send(method_name, *args)) })
+          ctx.attach(key, proc { |*args| json_safe(recv.public_send(method_name, *args)) })
           attached << key
         end
       end
@@ -214,7 +215,7 @@ module Mana
 
       def inject_ruby_vars(ctx, code)
         @binding.local_variables.each do |var_name|
-          next unless code.include?(var_name.to_s)
+          next unless code.match?(/\b#{Regexp.escape(var_name.to_s)}\b/)
 
           value = @binding.local_variable_get(var_name)
           inject_value(ctx, var_name.to_s, value)

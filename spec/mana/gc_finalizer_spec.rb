@@ -110,7 +110,7 @@ RSpec.describe "GC finalizer: cross-engine release notification" do
       Mana::Engines::Python.reset! if defined?(Mana::Engines::Python)
     end
 
-    it "tracks objects and calls release_fn on Python GC" do
+    it "tracks objects and release_all triggers release_fn" do
       released = []
       release_fn = proc { |ref_id| released << ref_id.to_i }
 
@@ -119,20 +119,15 @@ RSpec.describe "GC finalizer: cross-engine release notification" do
       mana_ref = ns["__ManaRef"]
       mana_ref.set_release_fn(release_fn)
 
-      # Create a Python object, track it, then delete it
+      # Create a Python object and track it
       PyCall.exec("class _TestObj: pass", locals: ns)
       PyCall.exec("_test_instance = _TestObj()", locals: ns)
       test_obj = ns["_test_instance"]
       mana_ref.track(99, test_obj)
 
-      # Delete the Python reference and force GC
-      PyCall.exec("del _test_instance", locals: ns)
-      PyCall.exec("import gc; gc.collect()", locals: ns)
-
-      # The release callback may or may not fire depending on Python GC timing,
-      # but the mechanism should be wired up without errors
-      # (Python GC is non-deterministic for prevent ref cycles)
-      expect { mana_ref.release_all }.not_to raise_error
+      # release_all deterministically releases all tracked objects
+      mana_ref.release_all
+      expect(released).to include(99)
     end
   end
 end

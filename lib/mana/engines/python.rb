@@ -51,7 +51,8 @@ module Mana
 
             @classmethod
             def release_all(cls):
-                cls._instances.clear()
+                for ref_id in list(cls._instances.keys()):
+                    cls._release(ref_id)
       PYTHON
 
       # Thread-local persistent Python state
@@ -283,8 +284,8 @@ module Mana
         end
 
         # Then try the receiver
-        if @receiver.respond_to?(name_s, true)
-          return @receiver.send(name_s, *args)
+        if @receiver.respond_to?(name_s)
+          return @receiver.public_send(name_s, *args)
         end
 
         super
@@ -300,8 +301,8 @@ module Mana
           return true if val.respond_to?(:call)
         end
 
-        # Check receiver
-        return true if @receiver.respond_to?(name_s, include_private)
+        # Check receiver (public methods only)
+        return true if @receiver.respond_to?(name_s)
 
         super
       end
