@@ -13,6 +13,7 @@ require_relative "mana/context_window"
 require_relative "mana/memory"
 require_relative "mana/engines/base"
 require_relative "mana/engines/llm"
+require_relative "mana/engines/ruby_eval"
 require_relative "mana/engines/detect"
 require_relative "mana/engine"
 require_relative "mana/introspect"
@@ -47,8 +48,10 @@ module Mana
     def reset!
       @config = Config.new
       EffectRegistry.clear!
+      Engines.reset_detector!
       Thread.current[:mana_memory] = nil
       Thread.current[:mana_mock] = nil
+      Thread.current[:mana_last_engine] = nil
     end
 
     # Define a custom effect that becomes an LLM tool

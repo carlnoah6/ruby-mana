@@ -74,7 +74,7 @@ module Mana
                         "Return ONLY the complete method definition (def...end), no explanation. " \
                         "Store the code as a string in <code>"
 
-        Mana::Engine.run(engine_prompt, b)
+        Mana::Engines::LLM.new(b).execute(engine_prompt)
         code
       end
 

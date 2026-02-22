@@ -11,6 +11,7 @@ module Mana
 
         # Detect language engine
         engine_class = detect_engine(prompt)
+        Thread.current[:mana_last_engine] = engine_name(engine_class)
 
         # Create engine and execute
         engine = engine_class.new(caller_binding)
@@ -18,9 +19,16 @@ module Mana
       end
 
       def detect_engine(code)
-        # For now: everything goes to LLM
-        # Language detection will be added in a later PR
-        Engines::LLM
+        Engines.detect(code, context: Thread.current[:mana_last_engine])
+      end
+
+      def engine_name(klass)
+        case klass.name
+        when /JavaScript/ then "javascript"
+        when /Python/ then "python"
+        when /Ruby/ then "ruby"
+        else "natural_language"
+        end
       end
 
       # Delegate to LLM engine for backward compatibility
