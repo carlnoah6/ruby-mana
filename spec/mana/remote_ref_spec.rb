@@ -92,24 +92,19 @@ RSpec.describe Mana::RemoteRef do
   end
 
   describe "GC finalizer" do
-    it "releases the registry entry when the RemoteRef is garbage collected" do
+    it "has a finalizer that releases the registry entry" do
       obj = Object.new
       id = registry.register(obj)
-
-      # Create a RemoteRef in a block so it can be GC'd
       ref = described_class.new(id, source_engine: "ruby", type_name: "Object")
+
+      # Simulate what the finalizer does (call the release_callback proc directly)
+      release_proc = described_class.release_callback(id, registry)
       expect(registry.registered?(id)).to be true
-
-      # Drop the reference and force GC
-      ref = nil
-      GC.start
-      sleep 0.05 # give finalizer a moment
-
-      # The registry entry should be released
+      release_proc.call(0) # finalizer receives object_id, we pass dummy
       expect(registry.registered?(id)).to be false
     end
 
-    it "fires on_release callbacks when GC'd" do
+    it "fires on_release callbacks via the finalizer mechanism" do
       released_ids = []
       registry.on_release { |id, _entry| released_ids << id }
 
@@ -117,11 +112,20 @@ RSpec.describe Mana::RemoteRef do
       id = registry.register(obj)
       ref = described_class.new(id, source_engine: "ruby")
 
-      ref = nil
-      GC.start
-      sleep 0.05
+      # Simulate finalizer firing
+      release_proc = described_class.release_callback(id, registry)
+      release_proc.call(0)
 
-      expect(released_ids).to include(id)
+      expect(released_ids).to eq([id])
+    end
+
+    it "registers a finalizer with ObjectSpace" do
+      obj = Object.new
+      id = registry.register(obj)
+
+      # Verify define_finalizer is called
+      expect(ObjectSpace).to receive(:define_finalizer).and_call_original
+      described_class.new(id, source_engine: "ruby")
     end
   end
 
