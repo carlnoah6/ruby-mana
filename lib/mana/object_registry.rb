@@ -15,6 +15,7 @@ module Mana
     def initialize
       @objects = {}
       @next_id = 1
+      @release_callbacks = []
     end
 
     # Store an object and return its reference ID.
@@ -37,9 +38,24 @@ module Mana
       entry ? entry[:object] : nil
     end
 
+    # Register a callback invoked when any reference is released.
+    # The callback receives (id, entry) where entry is { object:, type: }.
+    def on_release(&block)
+      @release_callbacks << block
+    end
+
     # Release a reference. Returns true if it existed.
+    # Fires registered on_release callbacks with the id and entry.
     def release(id)
-      !!@objects.delete(id)
+      entry = @objects.delete(id)
+      return false unless entry
+
+      @release_callbacks.each do |cb|
+        cb.call(id, entry)
+      rescue => e
+        # Don't let callback errors break the release
+      end
+      true
     end
 
     # Number of live references.
@@ -47,9 +63,10 @@ module Mana
       @objects.size
     end
 
-    # Remove all references.
+    # Remove all references. Fires on_release for each.
     def clear!
-      @objects.clear
+      ids = @objects.keys.dup
+      ids.each { |id| release(id) }
       @next_id = 1
     end
 
