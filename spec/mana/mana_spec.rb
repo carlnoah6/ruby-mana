@@ -78,6 +78,13 @@ RSpec.describe Mana do
       Mana.reset!
       expect(Thread.current[:mana_last_engine]).to be_nil
     end
+
+    it "clears the ObjectRegistry" do
+      Mana::ObjectRegistry.current.register(Object.new)
+      expect(Mana::ObjectRegistry.current.size).to eq(1)
+      Mana.reset!
+      expect(Mana::ObjectRegistry.current.size).to eq(0)
+    end
   end
 
   describe ".memory" do

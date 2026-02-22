@@ -406,4 +406,118 @@ RSpec.describe Mana::Engines::JavaScript do
       expect { described_class.context.eval("beta") }.to raise_error(MiniRacer::RuntimeError)
     end
   end
+
+  describe "remote references (complex objects)" do
+    before do
+      Mana::ObjectRegistry.reset!
+    end
+
+    after do
+      Mana::ObjectRegistry.reset!
+    end
+
+    it "passes complex objects as JS proxies" do
+      klass = Class.new do
+        attr_reader :value
+        def initialize(v) @value = v; end
+        def double() @value * 2; end
+      end
+
+      obj = klass.new(21)
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("obj.double()")
+      expect(result).to eq(42)
+    end
+
+    it "allows calling methods with arguments on proxied objects" do
+      klass = Class.new do
+        def add(a, b) a + b; end
+      end
+
+      calc = klass.new
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("calc.add(3, 4)")
+      expect(result).to eq(7)
+    end
+
+    it "registers complex objects in the ObjectRegistry" do
+      obj = Object.new
+      b = binding
+      engine = described_class.new(b)
+      engine.execute("obj.toString()")
+      expect(Mana::ObjectRegistry.current.size).to be >= 1
+    end
+
+    it "can check if a proxy is alive" do
+      obj = Object.new
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("obj.__mana_alive")
+      expect(result).to be true
+    end
+
+    it "can release a proxy" do
+      obj = Object.new
+      b = binding
+      engine = described_class.new(b)
+      ref_id = engine.execute("obj.__mana_ref")
+      engine.execute("obj.release()")
+      expect(Mana::ObjectRegistry.current.registered?(ref_id)).to be false
+    end
+
+    it "can get the type name of a proxy" do
+      obj = [1, 2, 3] # Use a known class, not anonymous
+      # But Array is simple type... use a Struct
+      MyStruct = Struct.new(:x) unless defined?(MyStruct)
+      obj = MyStruct.new(42)
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("obj.__mana_type")
+      expect(result).to be_a(String)
+      expect(result).to include("MyStruct")
+    end
+
+    it "still passes simple types by value (not proxy)" do
+      num = 42
+      str = "hello"
+      arr = [1, 2, 3]
+      hash = { "a" => 1 }
+      b = binding
+      engine = described_class.new(b)
+
+      # These should work as regular JS values, not proxies
+      expect(engine.execute("num + 1")).to eq(43)
+      expect(engine.execute("str + '!'")).to eq("hello!")
+      expect(engine.execute("arr.length")).to eq(3)
+      expect(engine.execute("hash.a")).to eq(1)
+    end
+
+    it "proxied object method results are JSON-safe" do
+      klass = Class.new do
+        def data() { "x" => 1, "y" => [2, 3] }; end
+      end
+
+      obj = klass.new
+      b = binding
+      engine = described_class.new(b)
+      engine.execute("const d = obj.data()")
+      expect(b.local_variable_get(:d)).to eq({ "x" => 1, "y" => [2, 3] })
+    end
+
+    it "handles multiple proxied objects" do
+      klass = Class.new do
+        attr_reader :name
+        def initialize(n) @name = n; end
+      end
+
+      a = klass.new("Alice")
+      b_obj = klass.new("Bob")
+      b = binding
+      engine = described_class.new(b)
+      engine.execute("const names = a.name() + ' and ' + b_obj.name()")
+      expect(b.local_variable_get(:names)).to eq("Alice and Bob")
+    end
+  end
 end
