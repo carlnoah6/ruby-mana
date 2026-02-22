@@ -4,6 +4,10 @@ source "https://rubygems.org"
 
 gemspec
 
+group :python do
+  gem "pycall", "~> 1.5"
+end
+
 group :development, :test do
   gem "rspec", "~> 3.13"
   gem "rubocop", "~> 1.68"

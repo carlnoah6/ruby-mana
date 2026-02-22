@@ -46,18 +46,17 @@ RSpec.describe Mana::Engines::Detector do
     context "Python code" do
       it "detects list comprehension" do
         result = detector.detect("evens = [n for n in data if n % 2 == 0]")
-        # Falls back to LLM since Python engine not implemented
-        expect(result).to eq(Mana::Engines::LLM)
+        expect(result).to eq(Mana::Engines::Python)
       end
 
       it "detects def keyword" do
         result = detector.detect("def calculate(x, y):\n    return x + y")
-        expect(result).to eq(Mana::Engines::LLM) # Python falls back to LLM
+        expect(result).to eq(Mana::Engines::Python)
       end
 
       it "detects Python-specific keywords" do
         result = detector.detect("print(self.__init__)")
-        expect(result).to eq(Mana::Engines::LLM)
+        expect(result).to eq(Mana::Engines::Python)
       end
     end
 
@@ -131,6 +130,31 @@ RSpec.describe Mana::Engines::Detector do
       it "returns LLM for whitespace" do
         result = detector.detect("   ")
         expect(result).to eq(Mana::Engines::LLM)
+      end
+
+      it "returns LLM for English prose with common Python-like words" do
+        result = detector.detect("with the end of the year, and the beginning of a new one, or perhaps not")
+        expect(result).to eq(Mana::Engines::LLM)
+      end
+
+      it "returns LLM for sentences containing 'True' or 'False'" do
+        result = detector.detect("True or False: the earth is round")
+        expect(result).to eq(Mana::Engines::LLM)
+      end
+
+      it "returns LLM for 'pass the salt please'" do
+        result = detector.detect("pass the salt please")
+        expect(result).to eq(Mana::Engines::LLM)
+      end
+
+      it "returns LLM for 'in the end it worked'" do
+        result = detector.detect("in the end it worked out fine")
+        expect(result).to eq(Mana::Engines::LLM)
+      end
+
+      it "still detects real Ruby code with end" do
+        result = detector.detect("def hello\n  puts 'hi'\nend")
+        expect(result).to eq(Mana::Engines::Ruby)
       end
     end
 

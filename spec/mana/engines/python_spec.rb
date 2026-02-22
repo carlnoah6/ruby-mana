@@ -187,5 +187,125 @@ RSpec.describe Mana::Engines::Python do
         expect(b.local_variable_get(:result)).to eq("hello")
       end
     end
+
+    describe "error wrapping" do
+      it "wraps Python syntax errors in Mana::Error" do
+        b = binding
+        engine = described_class.new(b)
+        expect { engine.execute("def broken(") }.to raise_error(Mana::Error, /Python execution error/)
+      end
+
+      it "wraps Python runtime errors in Mana::Error" do
+        b = binding
+        engine = described_class.new(b)
+        expect { engine.execute("result = 1 / 0") }.to raise_error(Mana::Error, /Python execution error/)
+      end
+
+      it "wraps NameError in Mana::Error" do
+        b = binding
+        engine = described_class.new(b)
+        expect { engine.execute("result = undefined_variable") }.to raise_error(Mana::Error, /Python execution error/)
+      end
+    end
+
+    describe "serialize_for_py" do
+      it "preserves numeric hash keys" do
+        engine = described_class.new(binding)
+        result = engine.send(:serialize_for_py, { 1 => "one", 2 => "two" })
+        expect(result).to eq({ 1 => "one", 2 => "two" })
+      end
+
+      it "converts symbol keys to strings" do
+        engine = described_class.new(binding)
+        result = engine.send(:serialize_for_py, { foo: "bar", baz: 42 })
+        expect(result).to eq({ "foo" => "bar", "baz" => 42 })
+      end
+
+      it "preserves string keys as-is" do
+        engine = described_class.new(binding)
+        result = engine.send(:serialize_for_py, { "key" => "val" })
+        expect(result).to eq({ "key" => "val" })
+      end
+
+      it "recursively serializes nested values" do
+        engine = described_class.new(binding)
+        result = engine.send(:serialize_for_py, { items: [1, :two, { nested: true }] })
+        expect(result).to eq({ "items" => [1, "two", { "nested" => true }] })
+      end
+    end
+
+    describe "selective variable injection" do
+      it "only injects variables referenced in the code" do
+        used = 10
+        unused = 20
+        b = binding
+        engine = described_class.new(b)
+        engine.execute("result = used + 1")
+        expect(b.local_variable_get(:result)).to eq(11)
+      end
+    end
+  end
+
+  describe Mana::Engines::RubyBridge do
+    let(:receiver) do
+      klass = Class.new do
+        def greet(name)
+          "hello #{name}"
+        end
+
+        private
+
+        def secret
+          "hidden"
+        end
+      end
+      klass.new
+    end
+
+    let(:bridge) do
+      b = binding
+      described_class.new(b)
+    end
+
+    it "proxies public method calls to the receiver" do
+      b = receiver # need receiver in binding scope
+      bnd = binding
+      br = described_class.new(bnd)
+      # receiver is accessible as 'b' in binding, but bridge uses binding.receiver
+      # Let's create a proper bridge with the receiver as binding.receiver
+      obj = receiver
+      fake_binding = obj.instance_eval { binding }
+      br2 = described_class.new(fake_binding)
+      expect(br2.greet("world")).to eq("hello world")
+    end
+
+    it "does not proxy private methods" do
+      obj = receiver
+      fake_binding = obj.instance_eval { binding }
+      br = described_class.new(fake_binding)
+      expect { br.secret }.to raise_error(NoMethodError)
+    end
+
+    it "reads and writes local variables" do
+      score = 100
+      b = binding
+      br = described_class.new(b)
+      expect(br.read("score")).to eq(100)
+      br.write("score", 200)
+      expect(b.local_variable_get(:score)).to eq(200)
+    end
+
+    it "calls local procs by name" do
+      doubler = proc { |x| x * 2 }
+      b = binding
+      br = described_class.new(b)
+      expect(br.call_proc("doubler", 5)).to eq(10)
+    end
+
+    it "raises NameError for undefined variables" do
+      b = binding
+      br = described_class.new(b)
+      expect { br.read("nonexistent") }.to raise_error(NameError)
+    end
   end
 end
