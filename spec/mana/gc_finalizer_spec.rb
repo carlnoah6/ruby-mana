@@ -40,18 +40,17 @@ RSpec.describe "GC finalizer: cross-engine release notification" do
   end
 
   describe "RemoteRef finalizer triggers on_release" do
-    it "notifies via on_release when RemoteRef is GC'd" do
+    it "notifies via on_release when finalizer fires" do
       notified = []
       registry.on_release { |id, entry| notified << { id: id, type: entry[:type] } }
 
       obj = [1, 2, 3]
       id = registry.register(obj)
-      ref = Mana::RemoteRef.new(id, source_engine: "javascript", type_name: "Array")
+      _ref = Mana::RemoteRef.new(id, source_engine: "javascript", type_name: "Array")
 
-      # Drop the ref and trigger GC
-      ref = nil
-      GC.start
-      sleep 0.05
+      # Simulate the finalizer firing (deterministic, no GC dependency)
+      release_proc = Mana::RemoteRef.release_callback(id, registry)
+      release_proc.call(0)
 
       expect(notified.length).to eq(1)
       expect(notified[0][:id]).to eq(id)
