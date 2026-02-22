@@ -45,6 +45,9 @@ module Mana
 
       def inject_ruby_vars(ctx, code)
         @binding.local_variables.each do |var_name|
+          # Only inject variables actually referenced in the code
+          next unless code.include?(var_name.to_s)
+
           value = @binding.local_variable_get(var_name)
           serialized = serialize(value)
           ctx.eval("var #{var_name} = #{JSON.generate(serialized)}")

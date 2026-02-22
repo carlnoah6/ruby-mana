@@ -197,4 +197,28 @@ RSpec.describe Mana::Engines::JavaScript do
       expect { engine.execute("const val = good + 1") }.not_to raise_error
     end
   end
+
+  describe "selective variable injection" do
+    it "only injects variables referenced in the code" do
+      b = binding
+      b.local_variable_set(:used_var, 10)
+      b.local_variable_set(:unused_var, 20)
+      engine = described_class.new(b)
+      result = engine.execute("used_var + 1")
+      expect(result).to eq(11)
+      # unused_var should NOT be in the JS context
+      expect { described_class.context.eval("unused_var") }.to raise_error(MiniRacer::RuntimeError)
+    end
+
+    it "does not pollute JS context with unrelated binding vars" do
+      b = binding
+      b.local_variable_set(:alpha, 1)
+      b.local_variable_set(:beta, 2)
+      b.local_variable_set(:gamma, 3)
+      engine = described_class.new(b)
+      engine.execute("const sum = alpha + gamma")
+      # beta was not referenced, should not exist in JS
+      expect { described_class.context.eval("beta") }.to raise_error(MiniRacer::RuntimeError)
+    end
+  end
 end

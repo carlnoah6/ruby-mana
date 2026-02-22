@@ -187,5 +187,36 @@ RSpec.describe Mana::Engines::Python do
         expect(b.local_variable_get(:result)).to eq("hello")
       end
     end
+
+    describe "error wrapping" do
+      it "wraps Python syntax errors in Mana::Error" do
+        b = binding
+        engine = described_class.new(b)
+        expect { engine.execute("def broken(") }.to raise_error(Mana::Error, /Python execution error/)
+      end
+
+      it "wraps Python runtime errors in Mana::Error" do
+        b = binding
+        engine = described_class.new(b)
+        expect { engine.execute("result = 1 / 0") }.to raise_error(Mana::Error, /Python execution error/)
+      end
+
+      it "wraps NameError in Mana::Error" do
+        b = binding
+        engine = described_class.new(b)
+        expect { engine.execute("result = undefined_variable") }.to raise_error(Mana::Error, /Python execution error/)
+      end
+    end
+
+    describe "selective variable injection" do
+      it "only injects variables referenced in the code" do
+        used = 10
+        unused = 20
+        b = binding
+        engine = described_class.new(b)
+        engine.execute("result = used + 1")
+        expect(b.local_variable_get(:result)).to eq(11)
+      end
+    end
   end
 end

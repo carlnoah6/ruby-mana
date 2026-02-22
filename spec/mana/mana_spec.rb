@@ -56,6 +56,28 @@ RSpec.describe Mana do
       Mana.reset!
       expect(Mana::EffectRegistry.tool_definitions).to be_empty
     end
+
+    it "resets JavaScript V8 context" do
+      require "mana/engines/javascript"
+      # Get a reference to the current JS context
+      ctx = Mana::Engines::JavaScript.context
+      ctx.eval("var jsResetTest = 42")
+      expect(ctx.eval("jsResetTest")).to eq(42)
+
+      Mana.reset!
+
+      # After reset, the old context should be disposed
+      expect { ctx.eval("jsResetTest") }.to raise_error(MiniRacer::Error)
+      # And a new context should not have the old variable
+      new_ctx = Mana::Engines::JavaScript.context
+      expect(new_ctx).not_to eq(ctx)
+    end
+
+    it "clears last engine context" do
+      Thread.current[:mana_last_engine] = "javascript"
+      Mana.reset!
+      expect(Thread.current[:mana_last_engine]).to be_nil
+    end
   end
 
   describe ".memory" do

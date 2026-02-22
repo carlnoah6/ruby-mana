@@ -25,3 +25,35 @@ puts "Doubled (JS): #{doubled}"
 
 ~"analyze <doubled> and tell me the statistical properties, store summary in <stats>"
 puts "Stats (LLM): #{stats}"
+
+puts "\n=== Python ==="
+data = [1, 2, 3, 4, 5]
+~"evens = [n for n in data if n % 2 == 0]"
+puts "Evens (Python): #{evens}"
+
+~"total = sum(data)"
+puts "Sum (Python): #{total}"
+
+puts "\n=== Bidirectional: Python calls Ruby ==="
+
+# Define a Ruby method that Python can call back
+class Converter
+  def celsius_to_fahrenheit(c)
+    c * 9.0 / 5 + 32
+  end
+end
+
+converter = Converter.new
+~"temps_c = [0, 20, 37, 100]"
+~"temps_f = [converter.celsius_to_fahrenheit(c) for c in temps_c]"
+puts "Fahrenheit: #{temps_f}"
+
+# Ruby proc callable from Python
+doubler = proc { |x| x * 2 }
+~"result = [doubler(n) for n in [1, 2, 3, 4]]"
+puts "Doubled via Ruby proc: #{result}"
+
+# Python reads/writes Ruby variables via bridge
+score = 0
+~"ruby.write('score', ruby.read('score') + 100)"
+puts "Score after Python update: #{score}"

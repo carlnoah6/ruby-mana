@@ -19,7 +19,6 @@ module Mana
       end
 
       def self.create_namespace
-        # Create a dedicated dict for Mana variables in Python
         PyCall.eval("dict()")
       end
 
@@ -37,19 +36,25 @@ module Mana
         # 1. Inject Ruby variables into Python namespace
         inject_ruby_vars(ns, code)
 
-        # 2. Execute Python code in the namespace
-        PyCall.exec(code, ns)
+        # 2. Inject the Ruby bridge for Python->Ruby callbacks
+        inject_ruby_bridge(ns)
 
-        # 3. Extract declared variables back to Ruby
+        # 3. Execute Python code in the namespace
+        PyCall.exec(code, locals: ns)
+
+        # 4. Extract declared variables back to Ruby
         extract_py_vars(ns, code)
 
         # Return the last expression value if possible
-        # Python exec doesn't return values, so we check for a 'result' variable
         begin
           ns["result"]
         rescue
           nil
         end
+      rescue PyCall::PyError => e
+        raise Mana::Error, "Python execution error: #{e.message}"
+      rescue ArgumentError => e
+        raise Mana::Error, "Python execution error: #{e.message}"
       end
 
       private
@@ -57,7 +62,7 @@ module Mana
       def inject_ruby_vars(ns, code)
         @binding.local_variables.each do |var_name|
           value = @binding.local_variable_get(var_name)
-          serialized = serialize(value)
+          serialized = serialize_for_py(value)
           begin
             ns[var_name.to_s] = serialized
           rescue => e
@@ -66,9 +71,27 @@ module Mana
         end
       end
 
+      # Inject a `ruby` bridge into the Python namespace.
+      #
+      # The bridge is a Ruby object with method_missing that proxies calls
+      # back to the Ruby binding. PyCall automatically wraps it so Python
+      # can call methods directly:
+      #
+      #   ruby.method_name(arg1, arg2)  -- call a Ruby method on the receiver
+      #   ruby.read("var")              -- read a Ruby local variable
+      #   ruby.write("var", value)      -- write a Ruby local variable
+      #   ruby.call_proc("name", args)  -- call a local proc/lambda by name
+      #
+      # Ruby objects (including the binding receiver) can also be injected
+      # directly and called from Python -- PyCall handles the wrapping.
+      def inject_ruby_bridge(ns)
+        ns["ruby"] = RubyBridge.new(@binding)
+      end
+
       def extract_py_vars(ns, code)
         declared_vars = extract_declared_vars(code)
         declared_vars.each do |var_name|
+          next if var_name == "ruby" # skip the bridge object
           begin
             value = ns[var_name]
             deserialized = deserialize_py(value)
@@ -88,13 +111,31 @@ module Mana
         vars.uniq
       end
 
+      # Serialize Ruby values for Python injection.
+      # Procs/lambdas and Ruby objects are passed directly --
+      # PyCall wraps them so Python can call their methods.
+      def serialize_for_py(value)
+        case value
+        when Numeric, String, TrueClass, FalseClass, NilClass
+          value
+        when Symbol
+          value.to_s
+        when Array
+          value.map { |v| serialize_for_py(v) }
+        when Hash
+          value.transform_keys(&:to_s).transform_values { |v| serialize_for_py(v) }
+        when Proc, Method
+          # Pass callables directly -- PyCall wraps them as Python callables
+          value
+        else
+          # Pass Ruby objects directly -- Python can call their methods via PyCall
+          value
+        end
+      end
+
       def deserialize_py(value)
-        # PyCall automatically converts basic Python types to Ruby
-        # list -> Array, dict -> Hash, int/float -> Numeric, str -> String
-        # For numpy arrays, convert to Ruby array
-        if defined?(PyCall) && value.is_a?(PyCall::PyObject)
+        if defined?(PyCall::PyObjectWrapper) && value.is_a?(PyCall::PyObjectWrapper)
           begin
-            # Try to convert to Ruby native type
             value.to_a rescue value.to_s
           rescue
             value.to_s
@@ -102,6 +143,84 @@ module Mana
         else
           value
         end
+      end
+    end
+
+    # Bridge object injected as `ruby` in the Python namespace.
+    # Enables Python->Ruby callbacks via method_missing.
+    #
+    # Python usage:
+    #   ruby.some_method(arg1, arg2)  -- calls method on binding receiver
+    #   ruby.read("var_name")         -- reads a Ruby local variable
+    #   ruby.write("var_name", val)   -- writes a Ruby local variable
+    #   ruby.call_proc("name", args)  -- calls a local proc/lambda by name
+    class RubyBridge
+      def initialize(caller_binding)
+        @binding = caller_binding
+        @receiver = caller_binding.receiver
+      end
+
+      # Read a Ruby local variable
+      def read(name)
+        name = name.to_s.to_sym
+        if @binding.local_variables.include?(name)
+          @binding.local_variable_get(name)
+        else
+          raise NameError, "undefined Ruby variable '#{name}'"
+        end
+      end
+
+      # Write a Ruby local variable
+      def write(name, value)
+        @binding.local_variable_set(name.to_s.to_sym, value)
+      end
+
+      # Explicitly call a local proc/lambda by name
+      def call_proc(name, *args)
+        name = name.to_s.to_sym
+        if @binding.local_variables.include?(name)
+          val = @binding.local_variable_get(name)
+          if val.respond_to?(:call)
+            return val.call(*args)
+          end
+        end
+        raise NoMethodError, "no callable '#{name}' in Ruby scope"
+      end
+
+      # Proxy unknown method calls to the binding receiver.
+      # This lets Python do: ruby.some_method(args)
+      def method_missing(name, *args)
+        name_s = name.to_s
+
+        # First check local procs/lambdas
+        name_sym = name_s.to_sym
+        if @binding.local_variables.include?(name_sym)
+          val = @binding.local_variable_get(name_sym)
+          return val.call(*args) if val.respond_to?(:call)
+        end
+
+        # Then try the receiver
+        if @receiver.respond_to?(name_s, true)
+          return @receiver.send(name_s, *args)
+        end
+
+        super
+      end
+
+      def respond_to_missing?(name, include_private = false)
+        name_s = name.to_s
+        name_sym = name_s.to_sym
+
+        # Check local callables
+        if @binding.local_variables.include?(name_sym)
+          val = @binding.local_variable_get(name_sym)
+          return true if val.respond_to?(:call)
+        end
+
+        # Check receiver
+        return true if @receiver.respond_to?(name_s, include_private)
+
+        super
       end
     end
   end
