@@ -10,6 +10,24 @@ module Mana
         @config = config
       end
 
+      # --- Capability queries ---
+      # Subclasses override to declare what they support.
+
+      # Can this engine hold remote references to objects in other engines?
+      def supports_remote_ref?
+        true
+      end
+
+      # Can code in this engine call back into another engine (bidirectional)?
+      def supports_bidirectional?
+        true
+      end
+
+      # Does this engine maintain mutable state across calls?
+      def supports_state?
+        true
+      end
+
       # Execute code/prompt in this engine, return the result
       # Subclasses must implement this
       def execute(code)

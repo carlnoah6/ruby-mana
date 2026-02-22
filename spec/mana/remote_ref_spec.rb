@@ -91,6 +91,40 @@ RSpec.describe Mana::RemoteRef do
     end
   end
 
+  describe "GC finalizer" do
+    it "releases the registry entry when the RemoteRef is garbage collected" do
+      obj = Object.new
+      id = registry.register(obj)
+
+      # Create a RemoteRef in a block so it can be GC'd
+      ref = described_class.new(id, source_engine: "ruby", type_name: "Object")
+      expect(registry.registered?(id)).to be true
+
+      # Drop the reference and force GC
+      ref = nil
+      GC.start
+      sleep 0.05 # give finalizer a moment
+
+      # The registry entry should be released
+      expect(registry.registered?(id)).to be false
+    end
+
+    it "fires on_release callbacks when GC'd" do
+      released_ids = []
+      registry.on_release { |id, _entry| released_ids << id }
+
+      obj = Object.new
+      id = registry.register(obj)
+      ref = described_class.new(id, source_engine: "ruby")
+
+      ref = nil
+      GC.start
+      sleep 0.05
+
+      expect(released_ids).to include(id)
+    end
+  end
+
   describe "custom objects" do
     it "proxies methods on user-defined classes" do
       klass = Class.new do

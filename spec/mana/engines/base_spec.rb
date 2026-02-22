@@ -48,6 +48,22 @@ RSpec.describe Mana::Engines::Base do
     end
   end
 
+  describe "capability queries" do
+    let(:engine) { described_class.new(binding) }
+
+    it "defaults to supporting remote refs" do
+      expect(engine.supports_remote_ref?).to be true
+    end
+
+    it "defaults to supporting bidirectional calls" do
+      expect(engine.supports_bidirectional?).to be true
+    end
+
+    it "defaults to supporting state" do
+      expect(engine.supports_state?).to be true
+    end
+  end
+
   describe "#serialize" do
     let(:engine) { described_class.new(binding) }
 

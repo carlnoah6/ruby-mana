@@ -17,8 +17,16 @@ module Mana
         (function() {
           if (typeof __mana_create_proxy !== 'undefined') return;
 
+          // FinalizationRegistry for automatic GC of remote refs.
+          // When a JS proxy is garbage collected, notify Ruby to release the original object.
+          if (typeof FinalizationRegistry !== 'undefined') {
+            globalThis.__mana_ref_gc = new FinalizationRegistry(function(refId) {
+              try { ruby.__ref_release(refId); } catch(e) {}
+            });
+          }
+
           globalThis.__mana_create_proxy = function(refId, typeName) {
-            return new Proxy({ __mana_ref: refId, __mana_type: typeName }, {
+            var proxy = new Proxy({ __mana_ref: refId, __mana_type: typeName }, {
               get: function(target, prop) {
                 if (prop === '__mana_ref') return target.__mana_ref;
                 if (prop === '__mana_type') return target.__mana_type;
@@ -37,14 +45,14 @@ module Mana
                 };
               }
             });
-          };
 
-          // FinalizationRegistry for automatic GC of remote refs
-          if (typeof FinalizationRegistry !== 'undefined') {
-            globalThis.__mana_ref_gc = new FinalizationRegistry(function(refId) {
-              try { ruby.__ref_release(refId); } catch(e) {}
-            });
-          }
+            // Register with FinalizationRegistry so GC triggers release
+            if (globalThis.__mana_ref_gc) {
+              globalThis.__mana_ref_gc.register(proxy, refId);
+            }
+
+            return proxy;
+          };
         })();
       JS
 

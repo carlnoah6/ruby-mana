@@ -9,6 +9,12 @@ module Mana
   #
   # On the Ruby side, RemoteRef can also wrap foreign objects (JS/Python) that
   # were passed to Ruby — method calls go through the engine's eval mechanism.
+  #
+  # GC behavior:
+  # - When a RemoteRef is garbage collected, its finalizer releases the entry
+  #   from the ObjectRegistry.
+  # - If an `on_release` callback is registered on the registry, it fires,
+  #   allowing the source engine to be notified (e.g., to free the foreign object).
   class RemoteRef
     attr_reader :ref_id, :source_engine, :type_name
 
@@ -61,7 +67,8 @@ module Mana
     private
 
     # Set up a release callback via Ruby finalizer.
-    # When this RemoteRef is garbage collected, the registry entry is released.
+    # When this RemoteRef is garbage collected, the registry entry is released,
+    # which in turn fires any on_release callbacks (notifying the source engine).
     # Uses a class method to avoid capturing `self` in the closure.
     def setup_release_callback
       release_proc = self.class.release_callback(@ref_id, @registry)
