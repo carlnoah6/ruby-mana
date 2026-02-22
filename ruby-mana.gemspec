@@ -17,10 +17,11 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.3.0"
 
-  s.files = Dir["lib/**/*.rb"] + Dir["*.md"] + ["LICENSE"]
+  s.files = Dir["lib/**/*.rb"] + Dir["data/**/*.yml"] + Dir["*.md"] + ["LICENSE"]
   s.require_paths = ["lib"]
 
   s.add_dependency "binding_of_caller", "~> 1.0"
+  s.add_dependency "mini_racer", "~> 0.16"
 
   s.metadata = {
     "homepage_uri" => s.homepage,

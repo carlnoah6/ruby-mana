@@ -254,6 +254,74 @@ Mana.incognito do
 end
 ```
 
+### Polyglot — Cross-Language Interop
+
+`~"..."` is a universal operator. It detects whether the code is JavaScript, Python, Ruby, or natural language, and routes to the appropriate engine. Variables bridge automatically.
+
+#### JavaScript
+
+```ruby
+require "mana"
+
+data = [1, 2, 3, 4, 5]
+
+# JavaScript — auto-detected from syntax
+~"const evens = data.filter(n => n % 2 === 0)"
+puts evens  # => [2, 4]
+
+# Multi-line with heredoc
+~<<~JS
+  const sum = evens.reduce((a, b) => a + b, 0)
+  const avg = sum / evens.length
+JS
+puts avg  # => 3.0
+```
+
+#### Python
+
+```ruby
+# Python — auto-detected
+~"evens = [n for n in data if n % 2 == 0]"
+puts evens  # => [2, 4]
+
+# Multi-line
+~<<~PY
+  import statistics
+  mean = statistics.mean(data)
+  stdev = statistics.stdev(data)
+PY
+puts mean   # => 3.0
+```
+
+#### Natural language (LLM) — existing behavior
+
+```ruby
+~"analyze <data> and find outliers, store in <result>"
+puts result
+```
+
+#### How detection works
+
+- Auto-detects from code syntax (token patterns)
+- Context-aware: consecutive `~"..."` calls tend to stay in the same language
+- Override with `Mana.engine = :javascript` or `Mana.with(:python) { ... }`
+- Detection rules are defined in `data/lang-rules.yml` — transparent, no black box
+
+#### Variable bridging
+
+- Simple types (numbers, strings, booleans, nil, arrays, hashes) are copied
+- Each engine maintains a persistent context (V8 for JS, Python interpreter for Python)
+- Variables created in one `~"..."` call persist for the next call in the same engine
+
+#### Setup
+
+```ruby
+# Gemfile
+gem "mana"
+gem "mini_racer"  # for JavaScript support (optional)
+gem "pycall"      # for Python support (optional)
+```
+
 ### Testing
 
 Use `Mana.mock` to test code that uses `~"..."` without calling any API:
