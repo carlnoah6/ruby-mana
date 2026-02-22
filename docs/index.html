@@ -121,9 +121,11 @@
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
   <div class="badges">
+    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.0</span>
     <span class="badge">Ruby 3.3+</span>
     <span class="badge">Multi-LLM</span>
     <span class="badge">Polyglot</span>
+    <span class="badge">4 Engines</span>
     <span class="badge">MIT License</span>
   </div>
 
@@ -277,8 +279,8 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
       <p>Anthropic and OpenAI-compatible APIs out of the box. Works with Ollama, DeepSeek, Groq, and more. Auto-detects backend from model name.</p>
     </div>
     <div class="card">
-      <h3>🌐 Polyglot interop</h3>
-      <p>Same <code>~"..."</code> operator runs JavaScript (V8), Python, or natural language. Auto-detected from syntax. Variables bridge across languages automatically.</p>
+      <h3>🌐 Polyglot — 4 engines</h3>
+      <p>Same <code>~"..."</code> runs JavaScript (V8), Python, Ruby eval, or LLM. Auto-detected from syntax. Bidirectional calling, RemoteRef proxies, and automatic GC across all engines.</p>
     </div>
   </div>
 </section>
@@ -409,11 +411,12 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
 
 <!-- Polyglot -->
 <section id="polyglot">
-  <h2>One operator, any language</h2>
-  <p class="lead"><code>~"..."</code> auto-detects JavaScript, Python, or natural language and routes to the right engine. Variables bridge automatically.</p>
-  <div class="grid grid-3">
+  <h2>One operator, four engines</h2>
+  <p class="lead"><code>~"..."</code> auto-detects JavaScript, Python, Ruby, or natural language and routes to the right engine. Variables bridge automatically.</p>
+
+  <div class="grid grid-3" style="margin-bottom:24px">
     <div class="card">
-      <h3>JavaScript</h3>
+      <h3>🟨 JavaScript (V8)</h3>
 <pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
 
 <span class="ms">~"const evens = data.filter(
@@ -423,7 +426,7 @@ puts evens
 <span class="cmt"># => [2, 4]</span></pre>
     </div>
     <div class="card">
-      <h3>Python</h3>
+      <h3>🐍 Python</h3>
 <pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
 
 <span class="ms">~"evens = [n for n in data
@@ -432,7 +435,7 @@ puts evens
 <span class="cmt"># => [2, 4]</span></pre>
     </div>
     <div class="card">
-      <h3>Natural Language</h3>
+      <h3>🤖 Natural Language</h3>
 <pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
 
 <span class="ms">~"find even numbers in
@@ -441,13 +444,86 @@ puts evens
 <span class="cmt"># => [2, 4]</span></pre>
     </div>
   </div>
-  <p style="color:var(--dim);font-size:.88rem;margin-top:16px">Detection uses token patterns from <code>data/lang-rules.yml</code>. Override with <code>Mana.engine = :javascript</code> or <code>Mana.with(:python) { ... }</code>. Variables (numbers, strings, arrays, hashes) copy between Ruby and each engine automatically.</p>
+
+  <p style="color:var(--dim);font-size:.88rem;margin-bottom:32px">Detection uses token patterns from <code>data/lang-rules.yml</code>. Override with <code>Mana.engine = :javascript</code> or <code>Mana.with(:python) { ... }</code>. The fourth engine is <code>:ruby</code> — <code>eval</code> in a sandboxed namespace.</p>
+
+  <h3 style="font-size:1.3rem;margin-bottom:16px">🔄 Bidirectional calling <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
+  <p class="lead">Foreign engines can call Ruby methods, and Ruby can call into them. Not just variable bridging — full function interop.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>JS → Ruby</h3>
+<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem"><span class="kw">def</span> <span class="fn">square</span>(n) = n ** <span class="num">2</span>
+
+<span class="ms">~"const result = ruby.square(7)"</span>
+puts result  <span class="cmt"># => 49</span>
+
+<span class="cmt"># JS calls Ruby methods via the
+# injected `ruby` bridge object</span></pre>
+    </div>
+    <div class="card">
+      <h3>Python → Ruby</h3>
+<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem"><span class="kw">def</span> <span class="fn">greet</span>(name) = <span class="str">"Hello #{name}"</span>
+
+<span class="ms">~"msg = ruby.greet('world')"</span>
+puts msg  <span class="cmt"># => "Hello world"</span>
+
+<span class="cmt"># Python calls Ruby via the same
+# `ruby` bridge — read/write/call</span></pre>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">🧬 RemoteRef — complex objects across engines <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
+  <p class="lead">Complex Ruby objects are passed as proxies, not serialized. Method calls route back through the bridge transparently.</p>
+<pre>user = User.new(<span class="str">"Alice"</span>, role: <span class="str">"admin"</span>)
+
+<span class="cmt"># JS receives a proxy — method calls route back to Ruby</span>
+<span class="ms">~"const name = user.name()"</span>       <span class="cmt"># => "Alice" (calls Ruby)</span>
+<span class="ms">~"const isAdmin = user.admin()"</span>   <span class="cmt"># => true   (calls Ruby)</span>
+
+<span class="cmt"># Python too</span>
+<span class="ms">~"role = user.role()"</span>             <span class="cmt"># => "admin" (calls Ruby)</span>
+
+<span class="cmt"># Objects are tracked in ObjectRegistry with integer IDs.
+# No serialization, no data loss — the real object stays in Ruby.</span></pre>
+
+  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">♻️ Automatic GC — no memory leaks <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
+  <p class="lead">When a RemoteRef is garbage collected on either side, the registry entry is released automatically.</p>
+  <div class="grid grid-3">
+    <div class="card">
+      <h3>Ruby side</h3>
+      <p><code>ObjectSpace.define_finalizer</code> on RemoteRef releases the ObjectRegistry entry when GC runs.</p>
+    </div>
+    <div class="card">
+      <h3>JS side</h3>
+      <p><code>FinalizationRegistry</code> on the Proxy calls <code>ruby.__ref_release()</code> when the JS proxy is collected.</p>
+    </div>
+    <div class="card">
+      <h3>Python side</h3>
+      <p><code>weakref.ref</code> callback releases the registry entry when the Python proxy is collected.</p>
+    </div>
+  </div>
+  <p style="color:var(--dim);font-size:.88rem;margin-top:16px">Plus <code>on_release</code> callbacks on ObjectRegistry for custom cleanup (close connections, flush buffers, etc.).</p>
+
+  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">🏷️ Engine capabilities <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
+  <p style="color:var(--dim);font-size:.88rem;margin-bottom:16px">Each engine declares what it supports. Query at runtime to adapt your code.</p>
+<pre>Mana.engine_for(<span class="str">:javascript</span>).capabilities
+<span class="cmt"># => #&lt;Set: {:execute, :variables, :bidirectional, :remote_ref, :gc_release}&gt;</span>
+
+Mana.engine_for(<span class="str">:llm</span>).capabilities
+<span class="cmt"># => #&lt;Set: {:execute, :variables, :tool_calling, :memory}&gt;</span>
+
+<span class="cmt"># Feature-gate your code</span>
+<span class="kw">if</span> engine.supports?(<span class="str">:bidirectional</span>)
+  <span class="ms">~"result = ruby.heavy_compute(data)"</span>
+<span class="kw">else</span>
+  <span class="ms">~"analyze &lt;data&gt;, store in &lt;result&gt;"</span>
+<span class="kw">end</span></pre>
 </section>
 
 <!-- How it works -->
 <section id="how">
   <h2>How it works</h2>
-  <p class="lead">Mana uses Ruby's unary <code>~</code> operator and algebraic effects to bridge natural language and code.</p>
+  <p class="lead">Mana uses Ruby's unary <code>~</code> operator to bridge natural language, JavaScript, Python, and Ruby code.</p>
   <div class="steps">
     <div class="step">
       <div class="sn">1</div>
@@ -455,19 +531,19 @@ puts evens
     </div>
     <div class="step">
       <div class="sn">2</div>
-      <div class="st"><strong>Parse &lt;var&gt; references</strong> — reads existing variables as context, discovers available methods via Prism AST</div>
+      <div class="st"><strong>Detect language</strong> — token patterns route to the right engine: JavaScript (V8), Python, Ruby eval, or LLM</div>
     </div>
     <div class="step">
       <div class="sn">3</div>
-      <div class="st"><strong>Send to LLM with tools</strong> — 6 built-in effects + any custom effects registered via <code>define_effect</code></div>
+      <div class="st"><strong>Bridge variables</strong> — simple types copy automatically; complex objects become RemoteRef proxies with method forwarding</div>
     </div>
     <div class="step">
       <div class="sn">4</div>
-      <div class="st"><strong>Execute tool calls</strong> — LLM responds with tool calls → Mana executes against the live Ruby binding → sends results back</div>
+      <div class="st"><strong>Execute</strong> — JS/Python run natively; LLM gets tools (6 built-in effects + custom). Bidirectional: foreign code can call Ruby back</div>
     </div>
     <div class="step">
       <div class="sn">5</div>
-      <div class="st"><strong>Loop until done</strong> — LLM calls <code>done</code> or returns without tool calls. Variables are set, objects are modified, functions were called.</div>
+      <div class="st"><strong>Cleanup</strong> — variables are set, objects modified. GC finalizers release RemoteRef entries automatically — no leaks</div>
     </div>
   </div>
 </section>
@@ -477,7 +553,8 @@ puts evens
   <h2>Install</h2>
   <div class="ib"><code><span class="d">$ </span>gem install ruby-mana</code></div>
   <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Or in your Gemfile: <code>gem "ruby-mana"</code></p>
-  <p style="color:var(--dim);font-size:.9rem">Requires Ruby 3.3+ and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
+  <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Requires Ruby 3.3+ and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
+  <p style="color:var(--dim);font-size:.9rem">For polyglot: <code>gem "mini_racer"</code> (JavaScript) and <code>gem "pycall"</code> (Python) are optional.</p>
 </section>
 
 <!-- Research -->
