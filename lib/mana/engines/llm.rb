@@ -5,6 +5,21 @@ require "json"
 module Mana
   module Engines
     class LLM < Base
+      # LLM is a special engine: it understands natural language and uses
+      # tool-calling to interact with Ruby variables, but it cannot hold
+      # remote object references or be called back from other engines.
+      def supports_remote_ref?
+        false
+      end
+
+      def supports_bidirectional?
+        false
+      end
+
+      def supports_state?
+        false
+      end
+
       TOOLS = [
         {
           name: "read_var",

@@ -11,6 +11,49 @@ require "json"
 module Mana
   module Engines
     class Python < Base
+      # Python helper code injected once per namespace.
+      # Sets up weak-ref tracking so when Python drops a reference to a
+      # complex Ruby object, the ObjectRegistry is notified.
+      PY_GC_HELPER = <<~PYTHON
+        import weakref as _mana_wr
+        import builtins as _mana_bi
+        _mana_bi._mana_weakref = _mana_wr
+
+        class __ManaRef:
+            """Weak-ref release notifier for Ruby objects passed to Python."""
+            _release_fn = None
+            _instances = {}
+
+            @classmethod
+            def set_release_fn(cls, fn):
+                cls._release_fn = fn
+
+            @classmethod
+            def track(cls, ref_id, obj):
+                """Track a Ruby object. When Python GC collects it, notify Ruby."""
+                import builtins
+                _wr = builtins._mana_weakref
+                try:
+                    ref = _wr.ref(obj, lambda r, rid=ref_id: cls._release(rid))
+                    cls._instances[ref_id] = ref
+                except TypeError:
+                    # Some objects can't be weakly referenced; skip them
+                    pass
+
+            @classmethod
+            def _release(cls, ref_id):
+                cls._instances.pop(ref_id, None)
+                if cls._release_fn:
+                    try:
+                        cls._release_fn(ref_id)
+                    except Exception:
+                        pass
+
+            @classmethod
+            def release_all(cls):
+                cls._instances.clear()
+      PYTHON
+
       # Thread-local persistent Python state
       # PyCall shares a single Python interpreter per process,
       # but we track our own variable namespace
@@ -25,14 +68,24 @@ module Mana
       def self.reset!
         ns = Thread.current[:mana_py_namespace]
         if ns
+          begin
+            mana_ref = ns["__ManaRef"]
+            mana_ref.release_all if mana_ref
+          rescue => e
+            # ignore
+          end
           PyCall.exec("pass") # ensure interpreter is alive
           Thread.current[:mana_py_namespace] = nil
         end
+        Thread.current[:mana_py_gc_injected] = nil
         ObjectRegistry.reset!
       end
 
       def execute(code)
         ns = self.class.namespace
+
+        # 0. Inject GC helper (once per namespace)
+        inject_gc_helper(ns)
 
         # 1. Inject Ruby variables into Python namespace
         inject_ruby_vars(ns, code)
@@ -59,6 +112,21 @@ module Mana
       end
 
       private
+
+      def inject_gc_helper(ns)
+        return if Thread.current[:mana_py_gc_injected]
+
+        PyCall.exec(PY_GC_HELPER, locals: ns)
+
+        # Wire up the release callback: when Python GC collects a tracked object,
+        # __ManaRef calls this proc to release it from the Ruby ObjectRegistry.
+        registry = ObjectRegistry.current
+        release_fn = proc { |ref_id| registry.release(ref_id.to_i) }
+        mana_ref = ns["__ManaRef"]
+        mana_ref.set_release_fn(release_fn)
+
+        Thread.current[:mana_py_gc_injected] = true
+      end
 
       def inject_ruby_vars(ns, code)
         @binding.local_variables.each do |var_name|
@@ -115,7 +183,7 @@ module Mana
       # Serialize Ruby values for Python injection.
       # Simple types are copied. Complex objects are passed directly via PyCall
       # (which wraps them so Python can call their methods) AND registered in
-      # the ObjectRegistry for lifecycle tracking.
+      # the ObjectRegistry for lifecycle tracking + GC notification.
       def serialize_for_py(value)
         case value
         when Numeric, String, TrueClass, FalseClass, NilClass
@@ -130,13 +198,24 @@ module Mana
             h[key] = serialize_for_py(v)
           end
         when Proc, Method
-          # Register callables for tracking, pass directly via PyCall
-          ObjectRegistry.current.register(value)
+          ref_id = ObjectRegistry.current.register(value)
+          track_in_python(ref_id, value)
           value
         else
-          # Register complex objects for tracking, pass directly via PyCall
-          ObjectRegistry.current.register(value)
+          ref_id = ObjectRegistry.current.register(value)
+          track_in_python(ref_id, value)
           value
+        end
+      end
+
+      # Tell the Python __ManaRef tracker to watch this object via weakref.
+      def track_in_python(ref_id, value)
+        ns = self.class.namespace
+        begin
+          mana_ref = ns["__ManaRef"]
+          mana_ref.track(ref_id, value) if mana_ref
+        rescue => e
+          # Non-fatal: some objects can't be weakly referenced in Python
         end
       end
 

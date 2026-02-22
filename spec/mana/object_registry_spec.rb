@@ -64,6 +64,48 @@ RSpec.describe Mana::ObjectRegistry do
     it "returns false for unknown IDs" do
       expect(registry.release(999)).to be false
     end
+
+    it "fires on_release callbacks" do
+      released_ids = []
+      registry.on_release { |id, _entry| released_ids << id }
+
+      obj = Object.new
+      id = registry.register(obj)
+      registry.release(id)
+
+      expect(released_ids).to eq([id])
+    end
+
+    it "passes the entry to on_release callbacks" do
+      released_entries = []
+      registry.on_release { |_id, entry| released_entries << entry }
+
+      obj = [1, 2, 3]
+      id = registry.register(obj)
+      registry.release(id)
+
+      expect(released_entries.length).to eq(1)
+      expect(released_entries[0][:object]).to equal(obj)
+      expect(released_entries[0][:type]).to eq("Array")
+    end
+
+    it "does not fire callbacks for unknown IDs" do
+      called = false
+      registry.on_release { |_id, _entry| called = true }
+      registry.release(999)
+      expect(called).to be false
+    end
+
+    it "does not break if a callback raises" do
+      registry.on_release { |_id, _entry| raise "boom" }
+      released = []
+      registry.on_release { |id, _entry| released << id }
+
+      id = registry.register(Object.new)
+      registry.release(id)
+
+      expect(released).to eq([id])
+    end
   end
 
   describe "#size" do
@@ -84,6 +126,16 @@ RSpec.describe Mana::ObjectRegistry do
       expect(registry.size).to eq(3)
       registry.clear!
       expect(registry.size).to eq(0)
+    end
+
+    it "fires on_release for each entry" do
+      released_ids = []
+      registry.on_release { |id, _entry| released_ids << id }
+
+      ids = 3.times.map { registry.register(Object.new) }
+      registry.clear!
+
+      expect(released_ids.sort).to eq(ids.sort)
     end
   end
 
