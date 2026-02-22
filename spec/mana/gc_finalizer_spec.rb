@@ -49,7 +49,7 @@ RSpec.describe "GC finalizer: cross-engine release notification" do
       _ref = Mana::RemoteRef.new(id, source_engine: "javascript", type_name: "Array")
 
       # Simulate the finalizer firing (deterministic, no GC dependency)
-      release_proc = Mana::RemoteRef.release_callback(id, registry)
+      release_proc = Mana::RemoteRef.send(:release_callback, id, registry)
       release_proc.call(0)
 
       expect(notified.length).to eq(1)

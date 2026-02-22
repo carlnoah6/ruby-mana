@@ -98,7 +98,7 @@ RSpec.describe Mana::RemoteRef do
       ref = described_class.new(id, source_engine: "ruby", type_name: "Object")
 
       # Simulate what the finalizer does (call the release_callback proc directly)
-      release_proc = described_class.release_callback(id, registry)
+      release_proc = described_class.send(:release_callback, id, registry)
       expect(registry.registered?(id)).to be true
       release_proc.call(0) # finalizer receives object_id, we pass dummy
       expect(registry.registered?(id)).to be false
@@ -113,7 +113,7 @@ RSpec.describe Mana::RemoteRef do
       ref = described_class.new(id, source_engine: "ruby")
 
       # Simulate finalizer firing
-      release_proc = described_class.release_callback(id, registry)
+      release_proc = described_class.send(:release_callback, id, registry)
       release_proc.call(0)
 
       expect(released_ids).to eq([id])
