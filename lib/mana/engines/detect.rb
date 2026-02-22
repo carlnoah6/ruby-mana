@@ -72,7 +72,10 @@ module Mana
       end
 
       def load_py_engine
-        warn "Mana: Python engine not yet available, falling back to LLM"
+        require_relative "python"
+        Engines::Python
+      rescue LoadError => e
+        warn "Mana: Python engine unavailable (#{e.message}), falling back to LLM"
         Engines::LLM
       end
     end

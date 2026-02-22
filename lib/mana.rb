@@ -49,6 +49,7 @@ module Mana
       @config = Config.new
       EffectRegistry.clear!
       Engines.reset_detector!
+      Engines::Python.reset! if defined?(Engines::Python)
       Thread.current[:mana_memory] = nil
       Thread.current[:mana_mock] = nil
       Thread.current[:mana_last_engine] = nil
