@@ -59,6 +59,8 @@
     .install-hero code{font-size:1.05rem;color:var(--gr)}
     .install-hero .d{color:var(--dim);user-select:none}
 
+    .grid-3{grid-template-columns:1fr 1fr 1fr}
+
     /* Mobile */
     @media(max-width:768px){
       .c{padding:0 16px}
@@ -73,7 +75,7 @@
       section{padding:40px 0}
       section h2{font-size:1.5rem}
       .lead{font-size:.95rem}
-      .grid,.cmp{grid-template-columns:1fr}
+      .grid,.grid-3,.cmp{grid-template-columns:1fr}
       .card{padding:16px 18px}
       .card h3{font-size:.95rem}
       .card p{font-size:.82rem}
@@ -103,6 +105,7 @@
     <div class="lk">
       <a href="#features">Features</a>
       <a href="#examples">Examples</a>
+      <a href="#polyglot">Polyglot</a>
       <a href="#how">How it works</a>
       <a href="https://github.com/carlnoah6/ruby-mana">GitHub</a>
       <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a>
@@ -120,6 +123,7 @@
   <div class="badges">
     <span class="badge">Ruby 3.3+</span>
     <span class="badge">Multi-LLM</span>
+    <span class="badge">Polyglot</span>
     <span class="badge">MIT License</span>
   </div>
 
@@ -187,6 +191,13 @@ Mana.configure <span class="kw">do</span> |c|
   c.model = <span class="str">"gpt-4o"</span>
 <span class="kw">end</span>
 <span class="cmt"># auto-detects backend from model name</span></pre>
+    </div>
+    <div class="slide">
+<pre><span class="cmt"># One operator, any language — auto-detected</span>
+data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+<span class="ms">~"const evens = data.filter(n => n % 2 === 0)"</span>  <span class="cmt"># JS</span>
+<span class="ms">~"mean = statistics.mean(data)"</span>                 <span class="cmt"># Python</span>
+<span class="ms">~"analyze &lt;data&gt;, store in &lt;result&gt;"</span>            <span class="cmt"># LLM</span></pre>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
@@ -264,6 +275,10 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
     <div class="card">
       <h3>🔌 Multi-LLM backends</h3>
       <p>Anthropic and OpenAI-compatible APIs out of the box. Works with Ollama, DeepSeek, Groq, and more. Auto-detects backend from model name.</p>
+    </div>
+    <div class="card">
+      <h3>🌐 Polyglot interop</h3>
+      <p>Same <code>~"..."</code> operator runs JavaScript (V8), Python, or natural language. Auto-detected from syntax. Variables bridge across languages automatically.</p>
     </div>
   </div>
 </section>
@@ -390,6 +405,43 @@ email.body = <span class="str">"Database connection pool exhausted..."</span>
 puts email.category  <span class="cmt"># =&gt; "infrastructure"</span>
 puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   </div>
+</section>
+
+<!-- Polyglot -->
+<section id="polyglot">
+  <h2>One operator, any language</h2>
+  <p class="lead"><code>~"..."</code> auto-detects JavaScript, Python, or natural language and routes to the right engine. Variables bridge automatically.</p>
+  <div class="grid grid-3">
+    <div class="card">
+      <h3>JavaScript</h3>
+<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+
+<span class="ms">~"const evens = data.filter(
+    n => n % 2 === 0
+  )"</span>
+puts evens
+<span class="cmt"># => [2, 4]</span></pre>
+    </div>
+    <div class="card">
+      <h3>Python</h3>
+<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+
+<span class="ms">~"evens = [n for n in data
+    if n % 2 == 0]"</span>
+puts evens
+<span class="cmt"># => [2, 4]</span></pre>
+    </div>
+    <div class="card">
+      <h3>Natural Language</h3>
+<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+
+<span class="ms">~"find even numbers in
+  &lt;data&gt;, store in &lt;evens&gt;"</span>
+puts evens
+<span class="cmt"># => [2, 4]</span></pre>
+    </div>
+  </div>
+  <p style="color:var(--dim);font-size:.88rem;margin-top:16px">Detection uses token patterns from <code>data/lang-rules.yml</code>. Override with <code>Mana.engine = :javascript</code> or <code>Mana.with(:python) { ... }</code>. Variables (numbers, strings, arrays, hashes) copy between Ruby and each engine automatically.</p>
 </section>
 
 <!-- How it works -->
