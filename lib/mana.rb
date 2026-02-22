@@ -11,6 +11,8 @@ require_relative "mana/namespace"
 require_relative "mana/memory_store"
 require_relative "mana/context_window"
 require_relative "mana/memory"
+require_relative "mana/object_registry"
+require_relative "mana/remote_ref"
 require_relative "mana/engines/base"
 require_relative "mana/engines/llm"
 require_relative "mana/engines/ruby_eval"
@@ -49,6 +51,7 @@ module Mana
       @config = Config.new
       EffectRegistry.clear!
       Engines.reset_detector!
+      ObjectRegistry.reset!
       Engines::JavaScript.reset! if defined?(Engines::JavaScript)
       Engines::Python.reset! if defined?(Engines::Python)
       Thread.current[:mana_memory] = nil

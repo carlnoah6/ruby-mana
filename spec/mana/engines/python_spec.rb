@@ -244,6 +244,50 @@ RSpec.describe Mana::Engines::Python do
         expect(b.local_variable_get(:result)).to eq(11)
       end
     end
+
+    describe "remote references (complex objects)" do
+      before do
+        Mana::ObjectRegistry.reset!
+      end
+
+      after do
+        Mana::ObjectRegistry.reset!
+      end
+
+      it "registers complex objects in the ObjectRegistry" do
+        klass = Class.new do
+          def greet() "hello"; end
+        end
+
+        obj = klass.new
+        b = binding
+        engine = described_class.new(b)
+        engine.execute("result = obj.greet()")
+        expect(Mana::ObjectRegistry.current.size).to be >= 1
+      end
+
+      it "passes complex objects that Python can call methods on" do
+        klass = Class.new do
+          def double(n) n * 2; end
+        end
+
+        calc = klass.new
+        b = binding
+        engine = described_class.new(b)
+        engine.execute("result = calc.double(21)")
+        expect(b.local_variable_get(:result)).to eq(42)
+      end
+
+      it "passes procs that Python can call" do
+        tripler = proc { |x| x * 3 }
+        b = binding
+        engine = described_class.new(b)
+        engine.execute("result = tripler(7)")
+        expect(b.local_variable_get(:result)).to eq(21)
+        # Proc should be registered
+        expect(Mana::ObjectRegistry.current.size).to be >= 1
+      end
+    end
   end
 
   describe Mana::Engines::RubyBridge do
