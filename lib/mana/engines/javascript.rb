@@ -188,7 +188,7 @@ module Mana
           next if attached.include?(key)
 
           recv = receiver
-          ctx.attach(key, proc { |*args| json_safe(recv.send(method_name, *args)) })
+          ctx.attach(key, proc { |*args| json_safe(recv.public_send(method_name, *args)) })
           attached << key
         end
       end
@@ -215,9 +215,7 @@ module Mana
 
       def inject_ruby_vars(ctx, code)
         @binding.local_variables.each do |var_name|
-          # Only inject variables actually referenced in the code (word-boundary match)
-          pattern = /\b#{Regexp.escape(var_name.to_s)}\b/
-          next unless code.match?(pattern)
+          next unless code.match?(/\b#{Regexp.escape(var_name.to_s)}\b/)
 
           value = @binding.local_variable_get(var_name)
           inject_value(ctx, var_name.to_s, value)

@@ -31,7 +31,7 @@ module Mana
       name_s = name.to_s
 
       # Don't proxy Ruby internal methods
-      return super if %w[__id__ __send__ class is_a? kind_of? instance_of? respond_to? respond_to_missing? equal? nil? frozen? tainted? inspect to_s hash].include?(name_s)
+      return super if %w[__id__ __send__ class is_a? kind_of? instance_of? respond_to? respond_to_missing? equal? nil? frozen? inspect to_s hash].include?(name_s)
 
       obj = @registry.get(@ref_id)
       raise Mana::Error, "Remote reference #{@ref_id} has been released" unless obj
