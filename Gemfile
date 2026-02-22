@@ -4,7 +4,9 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "pycall", "~> 1.5"
+group :python do
+  gem "pycall", "~> 1.5"
+end
 
 group :development, :test do
   gem "rspec", "~> 3.13"

@@ -123,7 +123,10 @@ module Mana
         when Array
           value.map { |v| serialize_for_py(v) }
         when Hash
-          value.transform_keys(&:to_s).transform_values { |v| serialize_for_py(v) }
+          value.each_with_object({}) do |(k, v), h|
+            key = k.is_a?(Symbol) ? k.to_s : k
+            h[key] = serialize_for_py(v)
+          end
         when Proc, Method
           # Pass callables directly -- PyCall wraps them as Python callables
           value
@@ -199,9 +202,9 @@ module Mana
           return val.call(*args) if val.respond_to?(:call)
         end
 
-        # Then try the receiver
-        if @receiver.respond_to?(name_s, true)
-          return @receiver.send(name_s, *args)
+        # Then try the receiver (public methods only)
+        if @receiver.respond_to?(name_s)
+          return @receiver.public_send(name_s, *args)
         end
 
         super
@@ -217,8 +220,8 @@ module Mana
           return true if val.respond_to?(:call)
         end
 
-        # Check receiver
-        return true if @receiver.respond_to?(name_s, include_private)
+        # Check receiver (public methods only, matching method_missing)
+        return true if @receiver.respond_to?(name_s)
 
         super
       end

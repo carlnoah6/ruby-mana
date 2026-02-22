@@ -45,8 +45,9 @@ module Mana
 
       def inject_ruby_vars(ctx, code)
         @binding.local_variables.each do |var_name|
-          # Only inject variables actually referenced in the code
-          next unless code.include?(var_name.to_s)
+          # Only inject variables actually referenced in the code (word-boundary match)
+          pattern = /\b#{Regexp.escape(var_name.to_s)}\b/
+          next unless code.match?(pattern)
 
           value = @binding.local_variable_get(var_name)
           serialized = serialize(value)

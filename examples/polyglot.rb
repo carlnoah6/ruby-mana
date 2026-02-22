@@ -31,7 +31,7 @@ data = [1, 2, 3, 4, 5]
 ~"evens = [n for n in data if n % 2 == 0]"
 puts "Evens (Python): #{evens}"
 
-~"total = sum(data)"
+~"total = sum(evens)"
 puts "Sum (Python): #{total}"
 
 puts "\n=== Bidirectional: Python calls Ruby ==="

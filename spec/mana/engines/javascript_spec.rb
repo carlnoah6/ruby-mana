@@ -210,6 +210,16 @@ RSpec.describe Mana::Engines::JavaScript do
       expect { described_class.context.eval("unused_var") }.to raise_error(MiniRacer::RuntimeError)
     end
 
+    it "does not inject variables that are substrings of other identifiers" do
+      b = binding
+      b.local_variable_set(:data, [1, 2, 3])
+      engine = described_class.new(b)
+      # 'metadata' contains 'data' as substring, but data should NOT be injected
+      engine.execute("const metadata = 'info'")
+      # data should not be in JS context since only 'metadata' was referenced
+      expect { described_class.context.eval("data") }.to raise_error(MiniRacer::RuntimeError)
+    end
+
     it "does not pollute JS context with unrelated binding vars" do
       b = binding
       b.local_variable_set(:alpha, 1)
