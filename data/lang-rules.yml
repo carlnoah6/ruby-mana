@@ -77,7 +77,7 @@ languages:
       - "if "
       - "is not"
       - "not in"
-      - "pass"
+      - "pass "
     anti:
       - "import this"
       - "import that"
@@ -140,8 +140,8 @@ languages:
       - "lambda {"
       - "-> {"
     weak:
-      - "end"
-      - "begin"
+      - "end "
+      - "begin "
       - "class "
       - "return "
       - "if "

@@ -64,6 +64,8 @@ module Mana
     end
 
     def self.reset!
+      registry = Thread.current[:mana_object_registry]
+      registry&.clear!
       Thread.current[:mana_object_registry] = nil
     end
   end

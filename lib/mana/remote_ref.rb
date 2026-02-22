@@ -30,13 +30,13 @@ module Mana
       obj = @registry.get(@ref_id)
       raise Mana::Error, "Remote reference #{@ref_id} has been released" unless obj
 
-      obj.send(name, *args, &block)
+      obj.public_send(name, *args, &block)
     end
 
     def respond_to_missing?(name, include_private = false)
       obj = @registry.get(@ref_id)
       return false unless obj
-      obj.respond_to?(name, include_private)
+      obj.respond_to?(name, false)
     end
 
     # Explicitly release this reference
@@ -64,7 +64,7 @@ module Mana
     # When this RemoteRef is garbage collected, the registry entry is released.
     # Uses a class method to avoid capturing `self` in the closure.
     def setup_release_callback
-      release_proc = self.class.release_callback(@ref_id, @registry)
+      release_proc = self.class.send(:release_callback, @ref_id, @registry)
       ObjectSpace.define_finalizer(self, release_proc)
     end
 
@@ -73,5 +73,6 @@ module Mana
     def self.release_callback(ref_id, registry)
       proc { |_| registry.release(ref_id) }
     end
+    private_class_method :release_callback
   end
 end

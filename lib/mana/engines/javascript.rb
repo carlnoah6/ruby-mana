@@ -7,6 +7,7 @@ rescue LoadError
 end
 
 require "json"
+require "set"
 
 module Mana
   module Engines
@@ -18,7 +19,7 @@ module Mana
           if (typeof __mana_create_proxy !== 'undefined') return;
 
           globalThis.__mana_create_proxy = function(refId, typeName) {
-            return new Proxy({ __mana_ref: refId, __mana_type: typeName }, {
+            var proxy = new Proxy({ __mana_ref: refId, __mana_type: typeName }, {
               get: function(target, prop) {
                 if (prop === '__mana_ref') return target.__mana_ref;
                 if (prop === '__mana_type') return target.__mana_type;
@@ -37,6 +38,10 @@ module Mana
                 };
               }
             });
+            if (typeof __mana_ref_gc !== 'undefined') {
+              __mana_ref_gc.register(proxy, refId);
+            }
+            return proxy;
           };
 
           // FinalizationRegistry for automatic GC of remote refs
@@ -138,7 +143,7 @@ module Mana
             raise "Remote reference #{ref_id} has been released" unless obj
 
             args = args_json ? JSON.parse(args_json) : []
-            result = obj.send(method_name.to_sym, *args)
+            result = obj.public_send(method_name.to_sym, *args)
             json_safe(result)
           })
           attached << "ruby.__ref_call"

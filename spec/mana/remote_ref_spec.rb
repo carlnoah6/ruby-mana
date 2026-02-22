@@ -111,4 +111,54 @@ RSpec.describe Mana::RemoteRef do
       expect(ref.double).to eq(42)
     end
   end
+
+  describe "method visibility" do
+    it "does not proxy private methods" do
+      klass = Class.new do
+        def greet() "hello"; end
+        private
+        def secret_method() "secret"; end
+      end
+
+      obj = klass.new
+      id = registry.register(obj)
+      ref = described_class.new(id, source_engine: "ruby", type_name: klass.name)
+      expect(ref.greet).to eq("hello")
+      expect { ref.secret_method }.to raise_error(NoMethodError)
+    end
+
+    it "does not proxy protected methods" do
+      klass = Class.new do
+        def greet() "hello"; end
+        protected
+        def protected_method() "protected"; end
+      end
+
+      obj = klass.new
+      id = registry.register(obj)
+      ref = described_class.new(id, source_engine: "ruby", type_name: klass.name)
+      expect(ref.greet).to eq("hello")
+      expect { ref.protected_method }.to raise_error(NoMethodError)
+    end
+
+    it "does not report private methods in respond_to?" do
+      klass = Class.new do
+        def public_method; end
+        private
+        def secret_method; end
+      end
+
+      obj = klass.new
+      id = registry.register(obj)
+      ref = described_class.new(id, source_engine: "ruby")
+      expect(ref.respond_to?(:public_method)).to be true
+      expect(ref.respond_to?(:secret_method)).to be false
+    end
+  end
+
+  describe ".release_callback" do
+    it "is a private class method" do
+      expect { described_class.release_callback(1, registry) }.to raise_error(NoMethodError, /private/)
+    end
+  end
 end

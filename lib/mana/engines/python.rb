@@ -206,8 +206,8 @@ module Mana
           return val.call(*args) if val.respond_to?(:call)
         end
 
-        # Then try the receiver (public methods only)
-        if @receiver.respond_to?(name_s)
+        # Then try the receiver
+        if @receiver.respond_to?(name_s, false)
           return @receiver.public_send(name_s, *args)
         end
 
@@ -224,8 +224,8 @@ module Mana
           return true if val.respond_to?(:call)
         end
 
-        # Check receiver (public methods only, matching method_missing)
-        return true if @receiver.respond_to?(name_s)
+        # Check receiver
+        return true if @receiver.respond_to?(name_s, false)
 
         super
       end

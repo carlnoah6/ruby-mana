@@ -415,6 +415,17 @@ RSpec.describe Mana::Engines::JavaScript do
       # beta was not referenced, should not exist in JS
       expect { described_class.context.eval("beta") }.to raise_error(MiniRacer::RuntimeError)
     end
+
+    it "uses word-boundary matching to avoid substring injection" do
+      b = binding
+      b.local_variable_set(:x, 10)
+      b.local_variable_set(:xy, 20)
+      engine = described_class.new(b)
+      # Only 'x' is referenced as a whole word, not 'xy'
+      result = engine.execute("x + 1")
+      expect(result).to eq(11)
+      expect { described_class.context.eval("xy") }.to raise_error(MiniRacer::RuntimeError)
+    end
   end
 
   describe "remote references (complex objects)" do
@@ -528,6 +539,20 @@ RSpec.describe Mana::Engines::JavaScript do
       engine = described_class.new(b)
       engine.execute("const names = a.name() + ' and ' + b_obj.name()")
       expect(b.local_variable_get(:names)).to eq("Alice and Bob")
+    end
+
+    it "does not allow calling private methods on proxied objects" do
+      klass = Class.new do
+        def greet() "hello"; end
+        private
+        def secret_method() "secret"; end
+      end
+
+      obj = klass.new
+      b = binding
+      engine = described_class.new(b)
+      expect(engine.execute("obj.greet()")).to eq("hello")
+      expect { engine.execute("obj.secret_method()") }.to raise_error(NoMethodError, /private/)
     end
   end
 end

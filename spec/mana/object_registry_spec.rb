@@ -123,5 +123,18 @@ RSpec.describe Mana::ObjectRegistry do
       expect(described_class.current).not_to equal(reg)
       expect(described_class.current.size).to eq(0)
     end
+
+    it "clears objects from the old registry before nilling" do
+      reg = described_class.current
+      obj = Object.new
+      id = reg.register(obj)
+      expect(reg.size).to eq(1)
+
+      described_class.reset!
+
+      # The old registry should have been cleared
+      expect(reg.size).to eq(0)
+      expect(reg.get(id)).to be_nil
+    end
   end
 end
