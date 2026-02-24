@@ -121,7 +121,7 @@
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
   <div class="badges">
-    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.0</span>
+    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.1</span>
     <span class="badge">Ruby 3.3+</span>
     <span class="badge">Multi-LLM</span>
     <span class="badge">Polyglot</span>
@@ -504,20 +504,22 @@ puts msg  <span class="cmt"># => "Hello world"</span>
   </div>
   <p style="color:var(--dim);font-size:.88rem;margin-top:16px">Plus <code>on_release</code> callbacks on ObjectRegistry for custom cleanup (close connections, flush buffers, etc.).</p>
 
-  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">🏷️ Engine capabilities <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
-  <p style="color:var(--dim);font-size:.88rem;margin-bottom:16px">Each engine declares what it supports. Query at runtime to adapt your code.</p>
-<pre>Mana.engine_for(<span class="str">:javascript</span>).capabilities
-<span class="cmt"># => #&lt;Set: {:execute, :variables, :bidirectional, :remote_ref, :gc_release}&gt;</span>
+  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">🏷️ Engine capabilities <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.1</span></h3>
+  <p style="color:var(--dim);font-size:.88rem;margin-bottom:16px">Engines declare their type: <strong>execution engines</strong> (Ruby/JS/Python) vs <strong>reasoning engines</strong> (LLM). Capabilities are derived automatically.</p>
+<pre><span class="cmt"># Check engine type</span>
+Mana::Engines::JavaScript.<span class="kw">new</span>(binding).execution_engine?
+<span class="cmt"># => true (can execute code, hold state, be called bidirectionally)</span>
 
-Mana.engine_for(<span class="str">:llm</span>).capabilities
-<span class="cmt"># => #&lt;Set: {:execute, :variables, :tool_calling, :memory}&gt;</span>
+Mana::Engines::LLM.<span class="kw">new</span>(binding).execution_engine?
+<span class="cmt"># => false (reasoning engine, no state/remote refs)</span>
 
-<span class="cmt"># Feature-gate your code</span>
-<span class="kw">if</span> engine.supports?(<span class="str">:bidirectional</span>)
-  <span class="ms">~"result = ruby.heavy_compute(data)"</span>
-<span class="kw">else</span>
-  <span class="ms">~"analyze &lt;data&gt;, store in &lt;result&gt;"</span>
-<span class="kw">end</span></pre>
+<span class="cmt"># Derived capabilities (backward compatible)</span>
+engine.supports_remote_ref?      <span class="cmt"># Can hold RemoteRef?</span>
+engine.supports_bidirectional?   <span class="cmt"># Can be called from other engines?</span>
+engine.supports_state?           <span class="cmt"># Maintains state across calls?</span>
+
+<span class="cmt"># All three return execution_engine? — no redundancy</span></pre>
+  <p style="color:var(--dim);font-size:.88rem;margin-top:12px"><strong>v0.5.1 refactor:</strong> Replaced three redundant flags with a single <code>execution_engine?</code> method. Clearer semantics, fully backward compatible.</p>
 </section>
 
 <!-- How it works -->
