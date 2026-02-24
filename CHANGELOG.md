@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1] - 2026-02-24
+
+### Changed
+- **Engine capability refactor** — replaced three redundant capability flags (`supports_remote_ref?`, `supports_bidirectional?`, `supports_state?`) with a single `execution_engine?` method
+- Clearer semantics: execution engines (Ruby/JS/Python) vs reasoning engines (LLM)
+- Fully backward compatible — old methods still work as derived properties
+
 ## [0.5.0] - 2026-02-22
 
 ### Added
