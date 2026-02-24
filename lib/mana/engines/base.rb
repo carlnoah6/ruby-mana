@@ -13,19 +13,29 @@ module Mana
       # --- Capability queries ---
       # Subclasses override to declare what they support.
 
-      # Can this engine hold remote references to objects in other engines?
-      def supports_remote_ref?
+      # Is this an execution engine (Ruby/JS/Python) or a reasoning engine (LLM)?
+      # Execution engines can execute code, hold state, and be called bidirectionally.
+      # Reasoning engines process natural language but cannot hold references or state.
+      def execution_engine?
         true
+      end
+
+      # Can this engine hold remote references to objects in other engines?
+      # Derived from execution_engine? — only execution engines support remote refs.
+      def supports_remote_ref?
+        execution_engine?
       end
 
       # Can code in this engine call back into another engine (bidirectional)?
+      # Derived from execution_engine? — only execution engines support bidirectional calls.
       def supports_bidirectional?
-        true
+        execution_engine?
       end
 
       # Does this engine maintain mutable state across calls?
+      # Derived from execution_engine? — only execution engines maintain state.
       def supports_state?
-        true
+        execution_engine?
       end
 
       # Execute code/prompt in this engine, return the result
