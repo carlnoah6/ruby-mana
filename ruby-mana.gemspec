@@ -11,9 +11,9 @@ Gem::Specification.new do |s|
     with full access to your program's live state. Read/write variables, call
     functions, manipulate objects — all from a simple ~"..." syntax.
   DESC
-  s.authors     = ["Carl"]
+  s.authors     = ["Carl Li"]
   s.license     = "MIT"
-  s.homepage    = "https://github.com/carlnoah6/ruby-mana"
+  s.homepage    = "https://github.com/twokidsCarl/ruby-mana"
 
   s.required_ruby_version = ">= 3.3.0"
 
