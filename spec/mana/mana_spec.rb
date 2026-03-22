@@ -40,7 +40,7 @@ RSpec.describe Mana do
       Mana.config.temperature = 0.9
       Mana.reset!
 
-      expect(Mana.config.model).to eq("claude-sonnet-4-20250514")
+      expect(Mana.config.model).to eq("claude-sonnet-4-6")
       expect(Mana.config.temperature).to eq(0)
     end
 

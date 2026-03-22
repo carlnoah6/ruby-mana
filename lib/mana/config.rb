@@ -22,7 +22,7 @@ module Mana
     DEFAULT_OPENAI_URL = "https://api.openai.com"
 
     def initialize
-      @model = "claude-sonnet-4-20250514"
+      @model = "claude-sonnet-4-6"
       @temperature = 0
       @api_key = ENV["ANTHROPIC_API_KEY"] || ENV["OPENAI_API_KEY"]
       @max_iterations = 50

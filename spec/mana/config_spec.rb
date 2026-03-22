@@ -7,7 +7,7 @@ RSpec.describe Mana::Config do
 
   describe "defaults" do
     it "sets model to claude-sonnet-4" do
-      expect(config.model).to eq("claude-sonnet-4-20250514")
+      expect(config.model).to eq("claude-sonnet-4-6")
     end
 
     it "sets temperature to 0" do
