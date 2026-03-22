@@ -427,18 +427,16 @@ module Mana
         validate_name!(name)
         sym = name.to_sym
 
-        # Check before set — local_variable_set always makes defined? return true
-        new_var = !@binding.local_variable_defined?(sym)
-
         @binding.local_variable_set(sym, value)
 
         # Ruby 4.0+: local_variable_set can no longer create new locals visible
-        # in the caller's scope. Fall back to defining a singleton method on the
-        # caller's self, so `puts result` still works without pre-declaration.
-        if new_var
-          receiver = @binding.eval("self")
-          receiver.define_singleton_method(sym) { value }
-        end
+        # in the caller's scope. Always define a singleton method as fallback,
+        # so `puts result` works whether or not the variable was pre-declared.
+        # (The parser may pre-register a local from a later `result = ...` line,
+        # making local_variable_defined? return true, but the local is still
+        # inaccessible via local_variable_set on Ruby 4.0.)
+        receiver = @binding.eval("self")
+        receiver.define_singleton_method(sym) { value }
       end
 
       def caller_source_path
