@@ -102,6 +102,60 @@ RSpec.describe Mana::Backends::Anthropic do
       }.to raise_error(Mana::LLMError, /HTTP 500/)
     end
 
+    it "sets open_timeout and read_timeout from config.timeout" do
+      config.timeout = 10
+
+      http_double = instance_double(Net::HTTP)
+      allow(Net::HTTP).to receive(:new).and_return(http_double)
+      allow(http_double).to receive(:use_ssl=)
+      allow(http_double).to receive(:open_timeout=)
+      allow(http_double).to receive(:read_timeout=)
+      allow(http_double).to receive(:request).and_return(
+        instance_double(Net::HTTPSuccess, is_a?: true, code: "200", body: JSON.generate({ content: [] }))
+      )
+
+      backend.chat(system: "sys", messages: [], tools: tools, model: "claude-sonnet-4-20250514")
+      expect(http_double).to have_received(:open_timeout=).with(10)
+      expect(http_double).to have_received(:read_timeout=).with(10)
+    end
+
+    it "applies default timeout of 120 when not overridden" do
+      http_double = instance_double(Net::HTTP)
+      allow(Net::HTTP).to receive(:new).and_return(http_double)
+      allow(http_double).to receive(:use_ssl=)
+      allow(http_double).to receive(:open_timeout=)
+      allow(http_double).to receive(:read_timeout=)
+      allow(http_double).to receive(:request).and_return(
+        instance_double(Net::HTTPSuccess, is_a?: true, code: "200", body: JSON.generate({ content: [] }))
+      )
+
+      backend.chat(system: "sys", messages: [], tools: tools, model: "claude-sonnet-4-20250514")
+      expect(http_double).to have_received(:open_timeout=).with(120)
+      expect(http_double).to have_received(:read_timeout=).with(120)
+    end
+
+    it "wraps Net::ReadTimeout in LLMError" do
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_timeout
+
+      expect {
+        backend.chat(system: "sys", messages: [], tools: tools, model: "claude-sonnet-4-20250514")
+      }.to raise_error(Mana::LLMError, /timed out/)
+    end
+
+    it "wraps Net::OpenTimeout in LLMError" do
+      http_double = instance_double(Net::HTTP)
+      allow(Net::HTTP).to receive(:new).and_return(http_double)
+      allow(http_double).to receive(:use_ssl=)
+      allow(http_double).to receive(:open_timeout=)
+      allow(http_double).to receive(:read_timeout=)
+      allow(http_double).to receive(:request).and_raise(Net::OpenTimeout.new("connection timed out"))
+
+      expect {
+        backend.chat(system: "sys", messages: [], tools: tools, model: "claude-sonnet-4-20250514")
+      }.to raise_error(Mana::LLMError, /timed out/)
+    end
+
     it "uses custom base_url" do
       config.base_url = "https://custom-proxy.example.com"
       stub = stub_request(:post, "https://custom-proxy.example.com/v1/messages")

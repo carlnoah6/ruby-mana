@@ -22,6 +22,10 @@ RSpec.describe Mana::Config do
       expect(config.max_iterations).to eq(50)
     end
 
+    it "sets timeout to 120" do
+      expect(config.timeout).to eq(120)
+    end
+
     it "defaults base_url to nil (resolved dynamically)" do
       expect(config.base_url).to be_nil unless ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
     end
@@ -76,12 +80,41 @@ RSpec.describe Mana::Config do
     end
   end
 
+  describe "timeout validation" do
+    it "accepts a positive integer" do
+      config.timeout = 60
+      expect(config.timeout).to eq(60)
+    end
+
+    it "accepts a positive float" do
+      config.timeout = 30.5
+      expect(config.timeout).to eq(30.5)
+    end
+
+    it "rejects nil" do
+      expect { config.timeout = nil }.to raise_error(ArgumentError, /positive number/)
+    end
+
+    it "rejects zero" do
+      expect { config.timeout = 0 }.to raise_error(ArgumentError, /positive number/)
+    end
+
+    it "rejects negative numbers" do
+      expect { config.timeout = -5 }.to raise_error(ArgumentError, /positive number/)
+    end
+
+    it "rejects non-numeric values" do
+      expect { config.timeout = "fast" }.to raise_error(ArgumentError, /positive number/)
+    end
+  end
+
   describe "accessors" do
     it "allows setting all attributes" do
       config.model = "test-model"
       config.temperature = 0.5
       config.api_key = "sk-test"
       config.max_iterations = 10
+      config.timeout = 60
       config.namespace = "my-app"
       config.compact_model = "claude-haiku"
 
@@ -89,6 +122,7 @@ RSpec.describe Mana::Config do
       expect(config.temperature).to eq(0.5)
       expect(config.api_key).to eq("sk-test")
       expect(config.max_iterations).to eq(10)
+      expect(config.timeout).to eq(60)
       expect(config.namespace).to eq("my-app")
       expect(config.compact_model).to eq("claude-haiku")
     end

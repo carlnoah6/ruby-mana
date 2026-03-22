@@ -7,6 +7,7 @@ module Mana
                   :namespace, :memory_store, :memory_path,
                   :context_window, :memory_pressure, :memory_keep_recent,
                   :compact_model, :on_compact
+    attr_reader :timeout
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
@@ -17,6 +18,7 @@ module Mana
       @api_key = ENV["ANTHROPIC_API_KEY"] || ENV["OPENAI_API_KEY"]
       @max_iterations = 50
       @base_url = ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
+      @timeout = 120
       @backend = nil
       @namespace = nil
       @memory_store = nil
@@ -26,6 +28,14 @@ module Mana
       @memory_keep_recent = 4
       @compact_model = nil
       @on_compact = nil
+    end
+
+    def timeout=(value)
+      unless value.is_a?(Numeric) && value.positive?
+        raise ArgumentError, "timeout must be a positive number, got #{value.inspect}"
+      end
+
+      @timeout = value
     end
 
     # Resolve the effective base URL based on the configured or auto-detected backend.

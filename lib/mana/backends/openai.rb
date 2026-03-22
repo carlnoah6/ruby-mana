@@ -18,7 +18,8 @@ module Mana
 
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
-        http.read_timeout = 120
+        http.open_timeout = @config.timeout
+        http.read_timeout = @config.timeout
 
         req = Net::HTTP::Post.new(uri)
         req["Content-Type"] = "application/json"
@@ -30,6 +31,8 @@ module Mana
 
         parsed = JSON.parse(res.body, symbolize_names: true)
         normalize_response(parsed)
+      rescue Net::OpenTimeout, Net::ReadTimeout => e
+        raise LLMError, "Request timed out: #{e.message}"
       end
 
       private
