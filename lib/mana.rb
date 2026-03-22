@@ -25,6 +25,7 @@ require_relative "mana/mixin"
 
 module Mana
   class Error < StandardError; end
+  class ConfigError < Error; end
   class MaxIterationsError < Error; end
   class LLMError < Error; end
   class MockError < Error; end

@@ -12,6 +12,16 @@ module Mana
     def self.for(config)
       return config.backend if config.backend.is_a?(Base)
 
+      if config.api_key.nil? || config.api_key.to_s.strip.empty?
+        raise ConfigError,
+          "API key is not configured. Set it via environment variable or Mana.configure:\n\n" \
+          "  export ANTHROPIC_API_KEY=your_key_here\n" \
+          "  # or\n" \
+          "  export OPENAI_API_KEY=your_key_here\n" \
+          "  # or\n" \
+          "  Mana.configure { |c| c.api_key = \"your_key_here\" }\n"
+      end
+
       case config.backend&.to_s
       when "openai" then OpenAI.new(config)
       when "anthropic" then Anthropic.new(config)
