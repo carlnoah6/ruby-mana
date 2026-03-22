@@ -147,6 +147,7 @@ module Mana
 
         iterations = 0
         done_result = nil
+        @written_vars = {}  # Track write_var calls for return value
 
         loop do
           iterations += 1
@@ -180,7 +181,16 @@ module Mana
         # Schedule compaction if needed (runs in background, skip for nested)
         memory&.schedule_compaction unless nested
 
-        done_result
+        # Return written variables so Ruby 4.0+ users can capture them:
+        #   result = ~"compute average and store in <result>"
+        # Single write → return the value directly; multiple → return Hash.
+        if @written_vars.size == 1
+          @written_vars.values.first
+        elsif @written_vars.size > 1
+          @written_vars.transform_keys(&:to_sym)
+        else
+          done_result
+        end
       ensure
         if nested && !@incognito
           Thread.current[:mana_memory] = outer_memory
@@ -335,6 +345,7 @@ module Mana
           var_name = input["name"]
           value = input["value"]
           write_local(var_name, value)
+          @written_vars[var_name] = value
           "ok: #{var_name} = #{value.inspect}"
 
         when "read_attr"

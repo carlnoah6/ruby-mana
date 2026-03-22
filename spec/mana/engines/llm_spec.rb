@@ -19,7 +19,7 @@ RSpec.describe Mana::Engines::LLM do
   end
 
   describe "#execute" do
-    it "runs the tool-calling loop and returns done result" do
+    it "runs the tool-calling loop and returns written variable value" do
       stub_anthropic_sequence(
         [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "x", "value" => 42 } }],
         [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
@@ -28,7 +28,7 @@ RSpec.describe Mana::Engines::LLM do
       b = binding
       engine = described_class.new(b)
       result = engine.execute("set <x> to 42")
-      expect(result).to eq("ok")
+      expect(result).to eq(42)  # returns written value for Ruby 4.0+ compatibility
       expect(b.local_variable_get(:x)).to eq(42)
     end
   end

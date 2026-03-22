@@ -38,12 +38,11 @@ export OPENAI_API_KEY=your_key_here
 export OPENAI_API_URL=https://api.openai.com        # optional, this is the default
 ```
 
-**Ruby 4.0 note:** Variables that `~"..."` writes to must be pre-declared in scope:
+**Ruby 4.0 note:** `~"..."` returns the written value, so capture it with assignment:
 
 ```ruby
-result = nil  # required on Ruby 4.0+
-~"compute the average of <numbers> and store in <result>"
-puts result
+result = ~"compute the average of <numbers> and store in <result>"
+puts result  # => 3.0
 ```
 
 ## Usage
