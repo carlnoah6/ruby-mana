@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.2] - 2026-03-22
+
+### Added
+- **API URL endpoint configuration** — `effective_base_url` auto-resolves the correct default URL per backend
+- Support for `ANTHROPIC_API_URL` and `OPENAI_API_URL` environment variables
+- API key fallback: `ANTHROPIC_API_KEY` → `OPENAI_API_KEY`
+- GitHub Actions workflow for automated issue fixing via Claude Code
+- GPT-5.4 independent code review workflow with auto-merge
+
 ## [0.5.1] - 2026-02-24
 
 ### Changed
