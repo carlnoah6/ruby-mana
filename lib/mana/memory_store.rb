@@ -4,6 +4,8 @@ require "json"
 require "fileutils"
 
 module Mana
+  # Abstract base class for long-term memory persistence.
+  # Subclass and implement read/write/clear to use a custom store (e.g. Redis, DB).
   class MemoryStore
     def read(namespace)
       raise NotImplementedError
@@ -18,6 +20,8 @@ module Mana
     end
   end
 
+  # Default file-based memory store. Persists memories as JSON files.
+  # Storage path resolution: explicit base_path > config.memory_path > XDG_DATA_HOME > OS default
   class FileStore < MemoryStore
     def initialize(base_path = nil)
       @base_path = base_path

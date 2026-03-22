@@ -6,7 +6,13 @@ require "uri"
 
 module Mana
   module Backends
+    # Native Anthropic Claude backend.
+    #
+    # Sends requests directly to the Anthropic Messages API (/v1/messages).
+    # No format conversion needed — Mana's internal format matches Anthropic's.
+    # Authentication uses x-api-key header (not Bearer token).
     class Anthropic < Base
+      # Send a chat request and return content blocks directly from the API.
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
         uri = URI("#{@config.effective_base_url}/v1/messages")
         body = {

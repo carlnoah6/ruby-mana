@@ -6,6 +6,13 @@ module Mana
   module Engines
     RULES_PATH = File.join(__dir__, "..", "..", "..", "data", "lang-rules.yml")
 
+    # Scores code against language-specific rules (from data/lang-rules.yml) to determine
+    # which execution engine to use. Scoring weights:
+    #   strong tokens: +3   (e.g. `const `, `elif `)
+    #   weak tokens:   +1   (e.g. `var `, `import `)
+    #   anti-patterns: -5   (e.g. `let me`, `for example` — natural language indicators)
+    #   regex patterns: +4  (e.g. `function\s+\w+\(`)
+    #   context boost:  +2  (previous language, only if score > 0)
     class Detector
       attr_reader :rules
 

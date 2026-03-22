@@ -6,7 +6,20 @@ require "uri"
 
 module Mana
   module Backends
+    # OpenAI-compatible backend (GPT, Groq, DeepSeek, Ollama, etc.)
+    #
+    # Internally, Mana uses Anthropic's message format as the canonical
+    # representation. This backend translates between the two formats:
+    #   Anthropic → OpenAI  (outgoing request)
+    #   OpenAI → Anthropic  (incoming response)
+    #
+    # Key differences handled:
+    #   - system prompt: Anthropic uses top-level `system`, OpenAI uses a system message
+    #   - tool calls: Anthropic uses `tool_use`/`tool_result` content blocks,
+    #     OpenAI uses `tool_calls` array and `role: "tool"` messages
+    #   - response: Anthropic returns `content` blocks, OpenAI returns `choices`
     class OpenAI < Base
+      # Send a chat completion request and return Anthropic-style content blocks.
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
         uri = URI("#{@config.effective_base_url}/v1/chat/completions")
         body = {

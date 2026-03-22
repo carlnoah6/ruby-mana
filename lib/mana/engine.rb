@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module Mana
+  # Top-level dispatcher that routes ~"..." prompts to the appropriate engine.
+  #
+  # Flow: prompt → mock check → language detection → engine execution
+  #
+  # Also serves as a backward-compatibility wrapper — older code that
+  # instantiates Engine directly is delegated to Engines::LLM.
   class Engine
     class << self
       def run(prompt, caller_binding)

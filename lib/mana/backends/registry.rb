@@ -2,9 +2,13 @@
 
 module Mana
   module Backends
+    # Model name patterns used to auto-detect which backend to use.
     ANTHROPIC_PATTERNS = /^(claude-)/i
     OPENAI_PATTERNS = /^(gpt-|o1-|o3-|chatgpt-|dall-e|tts-|whisper-)/i
 
+    # Resolve a backend instance from configuration.
+    # Priority: explicit backend instance > backend name > auto-detect from model name.
+    # Falls back to OpenAI as the most widely compatible format.
     def self.for(config)
       return config.backend if config.backend.is_a?(Base)
 

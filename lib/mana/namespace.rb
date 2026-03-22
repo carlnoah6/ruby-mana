@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module Mana
+  # Detects a namespace for isolating long-term memory storage.
+  # Fallback order: explicit config > git repo name > Gemfile dir > pwd > "default"
   module Namespace
     class << self
       def detect

@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module Mana
+  # Maps model names to their context window sizes (in tokens).
+  # Used by the memory system to estimate token pressure and decide
+  # when to trigger compaction. Falls back to DEFAULT for unknown models.
   module ContextWindow
     SIZES = {
       /claude-3-5-sonnet/ => 200_000,

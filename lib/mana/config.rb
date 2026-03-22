@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
 module Mana
+  # Central configuration for Mana. Set via Mana.configure { |c| ... }.
+  #
+  # Key options:
+  #   model            - LLM model name (default: claude-sonnet-4)
+  #   api_key          - API key, falls back to ANTHROPIC_API_KEY or OPENAI_API_KEY env vars
+  #   base_url         - Custom API endpoint, falls back to ANTHROPIC_API_URL or OPENAI_API_URL
+  #   backend          - :anthropic, :openai, or nil (auto-detect from model name)
+  #   timeout          - HTTP timeout in seconds (default: 120)
+  #   memory_pressure  - Token ratio (0-1) that triggers memory compaction (default: 0.7)
   class Config
     attr_accessor :model, :temperature, :api_key, :max_iterations, :base_url,
                   :backend,

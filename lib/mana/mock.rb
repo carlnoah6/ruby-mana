@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 module Mana
+  # Test double for LLM calls. Stubs are matched against prompt text:
+  #   Regexp patterns use match?, String patterns use include?.
+  #
+  # Usage:
+  #   Mana.mock do
+  #     prompt(/average/, result: 3.0)
+  #     ~"compute average of <numbers> and store in <result>"
+  #   end
+  #
+  # Thread-local — safe for parallel test execution.
   class Mock
     Stub = Struct.new(:pattern, :values, :block, keyword_init: true)
 
