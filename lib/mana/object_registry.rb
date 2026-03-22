@@ -52,7 +52,7 @@ module Mana
 
       @release_callbacks.each do |cb|
         cb.call(id, entry)
-      rescue => e
+      rescue
         # Don't let callback errors break the release
       end
       true

@@ -160,7 +160,6 @@ module Mana
             # Model returned text without calling any tools.
             # If we haven't done anything yet, retry once with a nudge.
             if iterations == 1 && @written_vars.empty?
-              text = response.map { |b| b[:text] || b["text"] }.compact.join
               messages << { role: "assistant", content: response }
               messages << { role: "user", content: "You must use the provided tools (read_var, write_var, done) to complete this task. Do not just describe the answer in text." }
               next
