@@ -1,0 +1,72 @@
+name: Claude Auto-Review PR
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    # 只 review 由 claude-fix workflow 创建的 PR（分支名 fix/issue-*）
+    if: startsWith(github.head_ref, 'fix/issue-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Claude Code Review
+        id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are a senior Ruby engineer reviewing a PR for the ruby-mana gem.
+
+            Review this PR thoroughly:
+            1. Read all changed files in this PR
+            2. Check code quality, correctness, edge cases, and style consistency
+            3. Run tests: bundle exec rspec
+            4. If tests fail, fix the code, commit, and push
+
+            After your review, you MUST comment on this PR with one of these two formats:
+
+            If everything is good (tests pass, code is correct):
+              Post a comment that starts with "LGTM" and briefly explain why the changes are good.
+
+            If there are issues:
+              Post a comment describing what needs to be fixed.
+              Then fix the issues yourself, commit, and push.
+          claude_args: "--model claude-opus-4-6-thinking --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+        env:
+          ANTHROPIC_BASE_URL: "https://aiberm.com"
+
+      - name: Auto-merge if approved
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 检查最新评论是否 LGTM
+          LAST_COMMENT=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --json comments --jq '.comments[-1].body')
+
+          if echo "$LAST_COMMENT" | grep -qi "LGTM"; then
+            echo "✅ Review passed, merging..."
+            gh pr merge ${{ github.event.pull_request.number }} \
+              --repo ${{ github.repository }} \
+              --squash \
+              --auto
+          else
+            echo "⏳ Review requested changes, waiting for next push..."
+          fi
