@@ -21,15 +21,19 @@ module Mana
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
 
+    # All config options can be set via environment variables:
+    #   MANA_MODEL, MANA_VERBOSE, MANA_TIMEOUT, MANA_BACKEND
+    #   ANTHROPIC_API_KEY / OPENAI_API_KEY
+    #   ANTHROPIC_API_URL / OPENAI_API_URL
     def initialize
-      @model = "claude-sonnet-4-6"
+      @model = ENV["MANA_MODEL"] || "claude-sonnet-4-6"
       @temperature = 0
       @api_key = ENV["ANTHROPIC_API_KEY"] || ENV["OPENAI_API_KEY"]
       @max_iterations = 50
       @base_url = ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
-      @timeout = 120
-      @verbose = false
-      @backend = nil
+      @timeout = (ENV["MANA_TIMEOUT"] || 120).to_i
+      @verbose = %w[1 true yes].include?(ENV["MANA_VERBOSE"]&.downcase)
+      @backend = ENV["MANA_BACKEND"]&.to_sym
       @namespace = nil
       @memory_store = nil
       @memory_path = nil
