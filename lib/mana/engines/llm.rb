@@ -156,7 +156,17 @@ module Mana
           response = llm_call(system_prompt, messages)
           tool_uses = extract_tool_uses(response)
 
-          break if tool_uses.empty?
+          if tool_uses.empty?
+            # Model returned text without calling any tools.
+            # If we haven't done anything yet, retry once with a nudge.
+            if iterations == 1 && @written_vars.empty?
+              text = response.map { |b| b[:text] || b["text"] }.compact.join
+              messages << { role: "assistant", content: response }
+              messages << { role: "user", content: "You must use the provided tools (read_var, write_var, done) to complete this task. Do not just describe the answer in text." }
+              next
+            end
+            break
+          end
 
           # Append assistant message
           messages << { role: "assistant", content: response }
