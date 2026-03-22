@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.3] - 2026-03-22
+
+### Added
+- **Timeout configuration** — `timeout` option in `Mana.configure` sets HTTP read timeout for LLM requests (default: 30 seconds). Closes #31
+
 ## [0.5.2] - 2026-03-22
 
 ### Added

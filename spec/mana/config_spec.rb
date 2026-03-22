@@ -22,6 +22,10 @@ RSpec.describe Mana::Config do
       expect(config.max_iterations).to eq(50)
     end
 
+    it "sets timeout to 30" do
+      expect(config.timeout).to eq(30)
+    end
+
     it "defaults base_url to nil (resolved dynamically)" do
       expect(config.base_url).to be_nil unless ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
     end
@@ -82,6 +86,7 @@ RSpec.describe Mana::Config do
       config.temperature = 0.5
       config.api_key = "sk-test"
       config.max_iterations = 10
+      config.timeout = 60
       config.namespace = "my-app"
       config.compact_model = "claude-haiku"
 
@@ -89,6 +94,7 @@ RSpec.describe Mana::Config do
       expect(config.temperature).to eq(0.5)
       expect(config.api_key).to eq("sk-test")
       expect(config.max_iterations).to eq(10)
+      expect(config.timeout).to eq(60)
       expect(config.namespace).to eq("my-app")
       expect(config.compact_model).to eq("claude-haiku")
     end

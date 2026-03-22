@@ -223,6 +223,20 @@ RSpec.describe Mana::Backends::OpenAI do
       }.to raise_error(Mana::LLMError, /HTTP 429/)
     end
 
+    it "sets read_timeout from config.timeout" do
+      config.timeout = 15
+      http_double = instance_double(Net::HTTP)
+      allow(Net::HTTP).to receive(:new).and_return(http_double)
+      allow(http_double).to receive(:use_ssl=)
+      allow(http_double).to receive(:read_timeout=)
+      allow(http_double).to receive(:request).and_return(
+        instance_double(Net::HTTPSuccess, is_a?: true, code: "200", body: JSON.generate({ choices: [{ message: { content: "ok" } }] }))
+      )
+
+      backend.chat(system: "sys", messages: [], tools: tools, model: "gpt-4o")
+      expect(http_double).to have_received(:read_timeout=).with(15)
+    end
+
     it "uses custom base_url for compatible APIs" do
       config.base_url = "http://localhost:11434"
       stub = stub_request(:post, "http://localhost:11434/v1/chat/completions")
