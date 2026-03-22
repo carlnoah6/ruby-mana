@@ -381,7 +381,8 @@ module Mana
 
         when "call_func"
           func = input["name"]
-          validate_name!(func)
+          args = input["args"] || []
+
           # Block Ruby introspection/dangerous methods
           blocked = %w[
             methods singleton_methods private_methods protected_methods public_methods
@@ -390,14 +391,27 @@ module Mana
             send __send__ public_send eval instance_eval instance_exec class_eval module_eval
             system exec fork spawn ` require require_relative load
             exit exit! abort at_exit
-            open File Dir IO Kernel
           ]
-          if blocked.include?(func) || func.include?(".")
+
+          # Handle Class.method calls (e.g. Time.now, Date.today)
+          if func.include?(".")
+            parts = func.split(".", 2)
+            blocked_receivers = %w[File Dir IO Kernel Process ObjectSpace ENV]
+            raise NameError, "'#{func}' is not callable" if blocked_receivers.include?(parts[0])
+            raise NameError, "'#{func}' is not callable" if blocked.include?(parts[1])
+
+            receiver = @binding.eval(parts[0]) rescue raise(NameError, "unknown constant '#{parts[0]}'")
+            result = receiver.public_send(parts[1].to_sym, *args)
+            vlog("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) → #{result.inspect}")
+            return serialize_value(result)
+          end
+
+          validate_name!(func)
+          if blocked.include?(func)
             raise NameError, "'#{func}' is not callable — only user-defined functions are allowed"
           end
 
-          args = input["args"] || []
-          # Try method first, then local variable (supports lambdas/procs)
+          # Try local variable (lambdas/procs) first, then receiver methods
           callable = if @binding.local_variables.include?(func.to_sym)
                        @binding.local_variable_get(func.to_sym)
                      elsif @binding.receiver.respond_to?(func.to_sym, true)
