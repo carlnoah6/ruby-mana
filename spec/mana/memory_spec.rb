@@ -138,6 +138,17 @@ RSpec.describe Mana::Memory do
       expect(memory.long_term.size).to eq(2)
     end
 
+    it "deduplicates identical content" do
+      memory = described_class.new
+      entry1 = memory.remember("same fact")
+      entry2 = memory.remember("same fact")
+      entry3 = memory.remember("different fact")
+
+      expect(entry1).to equal(entry2)  # returns same object
+      expect(memory.long_term.size).to eq(2)
+      expect(entry3[:id]).to eq(2)
+    end
+
     it "persists to disk immediately" do
       memory = described_class.new
       memory.remember("persisted fact")

@@ -82,6 +82,10 @@ module Mana
     end
 
     def remember(content)
+      # Deduplicate: skip if identical content already exists
+      existing = @long_term.find { |e| e[:content] == content }
+      return existing if existing
+
       entry = { id: @next_id, content: content, created_at: Time.now.iso8601 }
       @next_id += 1
       @long_term << entry
