@@ -139,7 +139,7 @@ Mana.configure do |c|
   c.temperature = 0
   c.api_key = ENV["ANTHROPIC_API_KEY"]
   c.max_iterations = 50
-  c.timeout = 30                      # HTTP read timeout in seconds
+  c.timeout = 120                     # HTTP timeout in seconds (default: 120)
 
   # Memory settings
   c.namespace = "my-project"      # nil = auto-detect from git/pwd

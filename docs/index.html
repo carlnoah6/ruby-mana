@@ -191,7 +191,7 @@ Mana.configure <span class="kw">do</span> |c|
   c.api_key = ENV[<span class="str">"OPENAI_API_KEY"</span>]
   c.base_url = <span class="str">"https://api.openai.com"</span>
   c.model = <span class="str">"gpt-4o"</span>
-  c.timeout = <span class="num">60</span>           <span class="cmt"># seconds (default: 30)</span>
+  c.timeout = <span class="num">60</span>           <span class="cmt"># seconds (default: 120)</span>
 <span class="kw">end</span>
 <span class="cmt"># auto-detects backend from model name</span>
 <span class="cmt"># or use env vars: ANTHROPIC_API_URL / OPENAI_API_URL</span></pre>

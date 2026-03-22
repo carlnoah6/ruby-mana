@@ -19,6 +19,7 @@ module Mana
 
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
+        http.open_timeout = @config.timeout
         http.read_timeout = @config.timeout
 
         req = Net::HTTP::Post.new(uri)
