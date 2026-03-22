@@ -435,7 +435,10 @@ module Mana
         # making local_variable_defined? return true, but the local is still
         # inaccessible via local_variable_set on Ruby 4.0.)
         receiver = @binding.eval("self")
+        # Suppress "method redefined" warning when the same variable is written multiple times
+        old_verbose, $VERBOSE = $VERBOSE, nil
         receiver.define_singleton_method(sym) { value }
+        $VERBOSE = old_verbose
       end
 
       def caller_source_path
