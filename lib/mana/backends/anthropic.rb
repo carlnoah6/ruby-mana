@@ -32,6 +32,8 @@ module Mana
 
         parsed = JSON.parse(res.body, symbolize_names: true)
         parsed[:content] || []
+      rescue Net::OpenTimeout, Net::ReadTimeout => e
+        raise LLMError, "Request timed out: #{e.message}"
       end
     end
   end

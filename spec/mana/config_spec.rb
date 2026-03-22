@@ -22,8 +22,8 @@ RSpec.describe Mana::Config do
       expect(config.max_iterations).to eq(50)
     end
 
-    it "sets timeout to 30" do
-      expect(config.timeout).to eq(30)
+    it "sets timeout to 120" do
+      expect(config.timeout).to eq(120)
     end
 
     it "defaults base_url to nil (resolved dynamically)" do
@@ -77,6 +77,34 @@ RSpec.describe Mana::Config do
       config.model = "claude-sonnet-4-20250514"
       config.base_url = nil
       expect(config.effective_base_url).to eq("https://api.openai.com")
+    end
+  end
+
+  describe "timeout validation" do
+    it "accepts a positive integer" do
+      config.timeout = 60
+      expect(config.timeout).to eq(60)
+    end
+
+    it "accepts a positive float" do
+      config.timeout = 30.5
+      expect(config.timeout).to eq(30.5)
+    end
+
+    it "rejects nil" do
+      expect { config.timeout = nil }.to raise_error(ArgumentError, /positive number/)
+    end
+
+    it "rejects zero" do
+      expect { config.timeout = 0 }.to raise_error(ArgumentError, /positive number/)
+    end
+
+    it "rejects negative numbers" do
+      expect { config.timeout = -5 }.to raise_error(ArgumentError, /positive number/)
+    end
+
+    it "rejects non-numeric values" do
+      expect { config.timeout = "fast" }.to raise_error(ArgumentError, /positive number/)
     end
   end
 
