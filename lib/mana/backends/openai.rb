@@ -8,7 +8,7 @@ module Mana
   module Backends
     class OpenAI < Base
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
-        uri = URI("#{@config.base_url}/v1/chat/completions")
+        uri = URI("#{@config.effective_base_url}/v1/chat/completions")
         body = {
           model: model,
           max_completion_tokens: max_tokens,

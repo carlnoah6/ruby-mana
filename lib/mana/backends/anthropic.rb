@@ -8,7 +8,7 @@ module Mana
   module Backends
     class Anthropic < Base
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
-        uri = URI("#{@config.base_url}/v1/messages")
+        uri = URI("#{@config.effective_base_url}/v1/messages")
         body = {
           model: model,
           max_tokens: max_tokens,
