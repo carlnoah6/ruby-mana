@@ -135,13 +135,38 @@ end
 
 ## Configuration
 
+All options can be set via environment variables (`.env` file) or `Mana.configure`:
+
+```bash
+# .env — just source it: `source .env`
+export ANTHROPIC_API_KEY=sk-your-key-here
+export ANTHROPIC_API_URL=https://api.anthropic.com   # optional, custom endpoint
+export MANA_MODEL=claude-sonnet-4-6                  # default model
+export MANA_VERBOSE=true                             # show LLM interactions
+export MANA_TIMEOUT=120                              # HTTP timeout in seconds
+export MANA_BACKEND=anthropic                        # force backend (anthropic/openai)
+```
+
+| Environment Variable | Config | Default | Description |
+|---------------------|--------|---------|-------------|
+| `ANTHROPIC_API_KEY` | `c.api_key` | — | API key (required) |
+| `OPENAI_API_KEY` | `c.api_key` | — | Fallback API key |
+| `ANTHROPIC_API_URL` | `c.base_url` | auto-detect | Custom API endpoint |
+| `OPENAI_API_URL` | `c.base_url` | auto-detect | Fallback endpoint |
+| `MANA_MODEL` | `c.model` | `claude-sonnet-4-6` | LLM model name |
+| `MANA_VERBOSE` | `c.verbose` | `false` | Log LLM calls to stderr |
+| `MANA_TIMEOUT` | `c.timeout` | `120` | HTTP timeout (seconds) |
+| `MANA_BACKEND` | `c.backend` | auto-detect | Force `anthropic` or `openai` |
+
+Programmatic config (overrides env vars):
+
 ```ruby
 Mana.configure do |c|
   c.model = "claude-sonnet-4-6"
   c.temperature = 0
-  c.api_key = ENV["ANTHROPIC_API_KEY"]
-  c.max_iterations = 50
-  c.timeout = 120                     # HTTP timeout in seconds (default: 120)
+  c.api_key = "sk-..."
+  c.verbose = true
+  c.timeout = 120
 
   # Memory settings
   c.namespace = "my-project"      # nil = auto-detect from git/pwd
