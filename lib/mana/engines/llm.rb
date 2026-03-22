@@ -270,11 +270,12 @@ module Mana
           "- Use read_var / read_attr to inspect variables and objects.",
           "- Use write_var to create or update variables in the Ruby scope.",
           "- Use write_attr to set attributes on Ruby objects.",
-          "- Use call_func to call Ruby methods available in scope.",
-          "- Call done when the task is complete.",
+          "- Use call_func to call Ruby methods listed below. Only call functions that are explicitly listed — do NOT guess or try to discover functions by calling methods like `methods`, `local_variables`, etc.",
+          "- Call done when the task is complete. If you cannot complete the task with the available tools, call done with an explanation.",
           "- When the user references <var>, that's a variable in scope.",
           "- If a referenced variable doesn't exist yet, the user expects you to create it with write_var.",
-          "- Be precise with types: use numbers for numeric values, arrays for lists, strings for text."
+          "- Be precise with types: use numbers for numeric values, arrays for lists, strings for text.",
+          "- Respond in the same language as the user's prompt unless explicitly told otherwise."
         ]
 
         # Inject long-term memories or incognito notice
@@ -380,14 +381,28 @@ module Mana
         when "call_func"
           func = input["name"]
           validate_name!(func)
+          # Block Ruby introspection/dangerous methods
+          blocked = %w[
+            methods singleton_methods private_methods protected_methods public_methods
+            instance_variables instance_variable_get instance_variable_set remove_instance_variable
+            local_variables global_variables
+            send __send__ public_send eval instance_eval instance_exec class_eval module_eval
+            system exec fork spawn ` require require_relative load
+            exit exit! abort at_exit
+            open File Dir IO Kernel
+          ]
+          if blocked.include?(func) || func.include?(".")
+            raise NameError, "'#{func}' is not callable — only user-defined functions are allowed"
+          end
+
           args = input["args"] || []
           # Try method first, then local variable (supports lambdas/procs)
-          callable = if @binding.receiver.respond_to?(func.to_sym, true)
-                       @binding.receiver.method(func.to_sym)
-                     elsif @binding.local_variables.include?(func.to_sym)
+          callable = if @binding.local_variables.include?(func.to_sym)
                        @binding.local_variable_get(func.to_sym)
+                     elsif @binding.receiver.respond_to?(func.to_sym, true)
+                       @binding.receiver.method(func.to_sym)
                      else
-                       @binding.receiver.method(func.to_sym) # raise NameError
+                       raise NameError, "undefined function '#{func}'"
                      end
           result = callable.call(*args)
           vlog("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) → #{result.inspect}")
