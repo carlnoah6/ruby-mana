@@ -32,8 +32,10 @@ Requires Ruby 3.3+ and an API key (Anthropic, OpenAI, or compatible):
 
 ```bash
 export ANTHROPIC_API_KEY=your_key_here
+export ANTHROPIC_API_URL=https://api.anthropic.com  # optional, this is the default
 # or
 export OPENAI_API_KEY=your_key_here
+export OPENAI_API_URL=https://api.openai.com        # optional, this is the default
 ```
 
 ## Usage

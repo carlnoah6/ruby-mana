@@ -14,16 +14,16 @@ RSpec.describe Mana::Config do
       expect(config.temperature).to eq(0)
     end
 
-    it "reads api_key from ENV" do
-      expect(config.api_key).to eq(ENV["ANTHROPIC_API_KEY"])
+    it "reads api_key from ANTHROPIC_API_KEY first" do
+      expect(config.api_key).to eq(ENV["ANTHROPIC_API_KEY"] || ENV["OPENAI_API_KEY"])
     end
 
     it "sets max_iterations to 50" do
       expect(config.max_iterations).to eq(50)
     end
 
-    it "sets base_url to anthropic" do
-      expect(config.base_url).to eq("https://api.anthropic.com")
+    it "defaults base_url to nil (resolved dynamically)" do
+      expect(config.base_url).to be_nil unless ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
     end
 
     it "sets memory_pressure to 0.7" do
@@ -40,6 +40,39 @@ RSpec.describe Mana::Config do
 
     it "defaults compact_model to nil" do
       expect(config.compact_model).to be_nil
+    end
+  end
+
+  describe "effective_base_url" do
+    it "returns Anthropic URL for claude models" do
+      config.model = "claude-sonnet-4-20250514"
+      config.base_url = nil
+      expect(config.effective_base_url).to eq("https://api.anthropic.com")
+    end
+
+    it "returns OpenAI URL for gpt models" do
+      config.model = "gpt-4o"
+      config.base_url = nil
+      expect(config.effective_base_url).to eq("https://api.openai.com")
+    end
+
+    it "returns explicit base_url when set" do
+      config.base_url = "http://localhost:11434"
+      expect(config.effective_base_url).to eq("http://localhost:11434")
+    end
+
+    it "respects explicit backend override for Anthropic" do
+      config.backend = :anthropic
+      config.model = "custom-model"
+      config.base_url = nil
+      expect(config.effective_base_url).to eq("https://api.anthropic.com")
+    end
+
+    it "respects explicit backend override for OpenAI" do
+      config.backend = :openai
+      config.model = "claude-sonnet-4-20250514"
+      config.base_url = nil
+      expect(config.effective_base_url).to eq("https://api.openai.com")
     end
   end
 
