@@ -137,7 +137,7 @@ end
 
 ```ruby
 Mana.configure do |c|
-  c.model = "claude-sonnet-4-20250514"
+  c.model = "claude-sonnet-4-6"
   c.temperature = 0
   c.api_key = ENV["ANTHROPIC_API_KEY"]
   c.max_iterations = 50
@@ -161,7 +161,7 @@ Mana supports Anthropic and OpenAI-compatible APIs (including Ollama, DeepSeek, 
 # Anthropic (default for claude-* models)
 Mana.configure do |c|
   c.api_key = ENV["ANTHROPIC_API_KEY"]
-  c.model = "claude-sonnet-4-20250514"
+  c.model = "claude-sonnet-4-6"
 end
 
 # OpenAI
@@ -216,37 +216,49 @@ Mana.define_effect :search_web,
 
 Built-in effects (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`) are reserved and cannot be overridden.
 
-### Memory — automatic context sharing
+### Memory
+
+Mana has two types of memory:
+
+- **Short-term memory** — conversation history within the current process. Each `~"..."` call appends to it, so consecutive calls share context. Cleared when the process exits.
+- **Long-term memory** — persistent facts stored on disk. Survives across script executions. The LLM can save facts via the `remember` tool.
+
+#### Short-term memory (conversation context)
 
 Consecutive `~"..."` calls automatically share context. No wrapper block needed:
 
 ```ruby
-~"remember: always translate to Japanese, casual tone"
-~"translate <text1>, store in <result1>"   # uses the preference
-~"translate <text2>, store in <result2>"   # still remembers
-~"which translation was harder? store in <analysis>"  # can reference both
+~"translate <text1> to Japanese, store in <result1>"
+~"translate <text2> to the same language, store in <result2>"   # remembers "Japanese"
+~"which translation was harder? store in <analysis>"            # can reference both
 ```
 
-Memory is per-thread and auto-created on the first `~"..."` call.
-
-#### Long-term memory
-
-The LLM has a `remember` tool that persists facts across script executions:
+Short-term memory is per-thread and auto-created on the first `~"..."` call.
 
 ```ruby
-~"remember that the user prefers concise output"
-# ... later, in a different script execution ...
-~"translate <text>"  # LLM sees the preference in its long-term memory
-```
-
-Manage long-term memory via Ruby:
-
-```ruby
-Mana.memory.long_term          # view all memories
-Mana.memory.forget(id: 2)     # remove a specific memory
-Mana.memory.clear_long_term!   # clear all long-term memories
+Mana.memory.short_term         # view conversation history
 Mana.memory.clear_short_term!  # clear conversation history
-Mana.memory.clear!             # clear everything
+```
+
+#### Long-term memory (persistent facts)
+
+The LLM has a `remember` tool that persists facts to disk. These survive across script executions:
+
+```ruby
+# script_1.rb
+~"remember that the user prefers concise output"
+
+# script_2.rb (later, separate execution)
+~"translate <text>"  # LLM sees "user prefers concise output" in long-term memory
+```
+
+Identical content is automatically deduplicated.
+
+```ruby
+Mana.memory.long_term          # view all persisted facts
+Mana.memory.forget(id: 2)     # remove a specific fact
+Mana.memory.clear_long_term!   # clear all long-term memory
+Mana.memory.clear!             # clear both short-term and long-term
 ```
 
 #### Incognito mode
