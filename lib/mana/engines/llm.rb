@@ -149,8 +149,13 @@ module Mana
         done_result = nil
         @written_vars = {}  # Track write_var calls for return value
 
+        vlog("═" * 60)
+        vlog("🚀 Prompt: #{prompt}")
+        vlog("📡 Backend: #{@config.effective_base_url} / #{@config.model}")
+
         loop do
           iterations += 1
+          @_iteration = iterations
           raise MaxIterationsError, "exceeded #{@config.max_iterations} iterations" if iterations > @config.max_iterations
 
           response = llm_call(system_prompt, messages)
@@ -348,13 +353,16 @@ module Mana
 
         case name
         when "read_var"
-          serialize_value(resolve(input["name"]))
+          val = serialize_value(resolve(input["name"]))
+          vlog("   ↩ #{input['name']} = #{val}")
+          val
 
         when "write_var"
           var_name = input["name"]
           value = input["value"]
           write_local(var_name, value)
           @written_vars[var_name] = value
+          vlog("   ✅ #{var_name} = #{value.inspect}")
           "ok: #{var_name} = #{value.inspect}"
 
         when "read_attr"
@@ -381,6 +389,7 @@ module Mana
                        @binding.receiver.method(func.to_sym) # raise NameError
                      end
           result = callable.call(*args)
+          vlog("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) → #{result.inspect}")
           serialize_value(result)
 
         when "remember"
@@ -394,6 +403,8 @@ module Mana
           end
 
         when "done"
+          vlog("🏁 Done: #{input['result'].inspect}")
+          vlog("═" * 60)
           input["result"].to_s
 
         else
@@ -479,14 +490,36 @@ module Mana
       # --- LLM Client ---
 
       def llm_call(system, messages)
+        vlog("\n#{"─" * 60}")
+        vlog("🔄 LLM call ##{@_iteration} → #{@config.model}")
         backend = Backends.for(@config)
-        backend.chat(
+        result = backend.chat(
           system: system,
           messages: messages,
           tools: self.class.all_tools,
           model: @config.model,
           max_tokens: 4096
         )
+        # Log response content
+        result.each do |block|
+          type = block[:type] || block["type"]
+          case type
+          when "text"
+            text = block[:text] || block["text"]
+            vlog("💬 #{text}")
+          when "tool_use"
+            name = block[:name] || block["name"]
+            input = block[:input] || block["input"]
+            vlog("🔧 #{name}(#{input.inspect})")
+          end
+        end
+        result
+      end
+
+      def vlog(msg)
+        return unless @config.verbose
+
+        $stderr.puts "\e[2m[mana] #{msg}\e[0m"
       end
 
       def extract_tool_uses(content)

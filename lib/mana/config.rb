@@ -12,7 +12,7 @@ module Mana
   #   memory_pressure  - Token ratio (0-1) that triggers memory compaction (default: 0.7)
   class Config
     attr_accessor :model, :temperature, :api_key, :max_iterations, :base_url,
-                  :backend,
+                  :backend, :verbose,
                   :namespace, :memory_store, :memory_path,
                   :context_window, :memory_pressure, :memory_keep_recent,
                   :compact_model, :on_compact
@@ -28,6 +28,7 @@ module Mana
       @max_iterations = 50
       @base_url = ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
       @timeout = 120
+      @verbose = false
       @backend = nil
       @namespace = nil
       @memory_store = nil
