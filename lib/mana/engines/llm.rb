@@ -275,7 +275,8 @@ module Mana
           "- When the user references <var>, that's a variable in scope.",
           "- If a referenced variable doesn't exist yet, the user expects you to create it with write_var.",
           "- Be precise with types: use numbers for numeric values, arrays for lists, strings for text.",
-          "- Respond in the same language as the user's prompt unless explicitly told otherwise."
+          "- Respond in the same language as the user's prompt unless explicitly told otherwise.",
+          "- PRIORITY: The user's current prompt ALWAYS overrides any prior context, conversation history, or long-term memories. Treat it like Ruby's inner scope shadowing outer scope."
         ]
 
         # Inject long-term memories or incognito notice
