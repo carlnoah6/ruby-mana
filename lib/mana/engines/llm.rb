@@ -404,7 +404,17 @@ module Mana
 
       def write_local(name, value)
         validate_name!(name)
-        @binding.local_variable_set(name.to_sym, value)
+        sym = name.to_sym
+
+        # Ruby 4.0+: local_variable_set can only update existing variables,
+        # not create new ones visible in the caller's scope.
+        unless @binding.local_variable_defined?(sym)
+          warn "Mana: variable `#{name}` is not declared in the calling scope. " \
+               "On Ruby 4.0+, you must pre-declare it (e.g. `#{name} = nil`) before " \
+               "using ~\"...store in <#{name}>\"."
+        end
+
+        @binding.local_variable_set(sym, value)
       end
 
       def caller_source_path

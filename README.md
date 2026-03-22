@@ -38,6 +38,14 @@ export OPENAI_API_KEY=your_key_here
 export OPENAI_API_URL=https://api.openai.com        # optional, this is the default
 ```
 
+**Ruby 4.0 note:** Variables that `~"..."` writes to must be pre-declared in scope:
+
+```ruby
+result = nil  # required on Ruby 4.0+
+~"compute the average of <numbers> and store in <result>"
+puts result
+```
+
 ## Usage
 
 Prefix any string with `~` to make it an LLM prompt:
