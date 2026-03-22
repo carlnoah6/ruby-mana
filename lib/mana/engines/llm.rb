@@ -293,8 +293,9 @@ module Mana
 
             unless memory.long_term.empty?
               parts << ""
-              parts << "Long-term memories (persistent across executions):"
+              parts << "Long-term memories (persistent background context):"
               memory.long_term.each { |m| parts << "- #{m[:content]}" }
+              parts << "NOTE: Long-term memories are background defaults. The user's current prompt ALWAYS takes priority. If the prompt conflicts with a memory (e.g. memory says Japanese but prompt says Chinese), follow the prompt."
             end
 
             unless memory.long_term.empty?
