@@ -1,0 +1,28 @@
+name: Dispatch to Ops
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to ops repo
+        env:
+          GH_TOKEN: ${{ secrets.OPS_PAT }}
+        run: |
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            gh api repos/twokidsCarl/ruby-mana-ops/dispatches \
+              -f event_type=issue_event \
+              -f 'client_payload[issue_number]=${{ github.event.issue.number }}' \
+              -f 'client_payload[issue_title]=${{ github.event.issue.title }}' \
+              -f 'client_payload[issue_body]=${{ github.event.issue.body }}'
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            gh api repos/twokidsCarl/ruby-mana-ops/dispatches \
+              -f event_type=pr_event \
+              -f 'client_payload[pr_number]=${{ github.event.pull_request.number }}' \
+              -f 'client_payload[head_ref]=${{ github.head_ref }}'
+          fi
