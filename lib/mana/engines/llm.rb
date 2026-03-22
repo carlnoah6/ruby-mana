@@ -417,15 +417,18 @@ module Mana
         validate_name!(name)
         sym = name.to_sym
 
-        # Ruby 4.0+: local_variable_set can only update existing variables,
-        # not create new ones visible in the caller's scope.
-        unless @binding.local_variable_defined?(sym)
-          warn "Mana: variable `#{name}` is not declared in the calling scope. " \
-               "On Ruby 4.0+, you must pre-declare it (e.g. `#{name} = nil`) before " \
-               "using ~\"...store in <#{name}>\"."
-        end
+        # Check before set — local_variable_set always makes defined? return true
+        new_var = !@binding.local_variable_defined?(sym)
 
         @binding.local_variable_set(sym, value)
+
+        # Ruby 4.0+: local_variable_set can no longer create new locals visible
+        # in the caller's scope. Fall back to defining a singleton method on the
+        # caller's self, so `puts result` still works without pre-declaration.
+        if new_var
+          receiver = @binding.eval("self")
+          receiver.define_singleton_method(sym) { value }
+        end
       end
 
       def caller_source_path

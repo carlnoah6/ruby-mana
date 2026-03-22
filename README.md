@@ -38,12 +38,7 @@ export OPENAI_API_KEY=your_key_here
 export OPENAI_API_URL=https://api.openai.com        # optional, this is the default
 ```
 
-**Ruby 4.0 note:** `~"..."` returns the written value, so capture it with assignment:
-
-```ruby
-result = ~"compute the average of <numbers> and store in <result>"
-puts result  # => 3.0
-```
+Supports Ruby 3.3, 3.4, and 4.0 — no API differences between versions.
 
 ## Usage
 
