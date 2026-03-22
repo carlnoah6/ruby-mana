@@ -103,7 +103,7 @@ RSpec.describe "GC finalizer: cross-engine release notification" do
 
   describe "Python engine __ManaRef" do
     before do
-      skip "pycall not available" unless defined?(PyCall)
+      skip "pycall not available" unless defined?(PyCall) && Mana::Engines::Python.respond_to?(:namespace)
     end
 
     after do

@@ -43,7 +43,7 @@ RSpec.describe Mana::Engines::Detector do
       end
     end
 
-    context "Python code" do
+    context "Python code", skip: !defined?(Mana::Engines::Python) && "pycall not available" do
       it "detects list comprehension" do
         result = detector.detect("evens = [n for n in data if n % 2 == 0]")
         expect(result).to eq(Mana::Engines::Python)

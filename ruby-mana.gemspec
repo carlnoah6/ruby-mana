@@ -15,13 +15,13 @@ Gem::Specification.new do |s|
   s.license     = "MIT"
   s.homepage    = "https://github.com/twokidsCarl/ruby-mana"
 
-  s.required_ruby_version = ">= 3.3.0"
+  s.required_ruby_version = ">= 3.3"
 
   s.files = Dir["lib/**/*.rb"] + Dir["data/**/*.yml"] + Dir["*.md"] + ["LICENSE"]
   s.require_paths = ["lib"]
 
-  s.add_dependency "binding_of_caller", "~> 1.0"
-  s.add_dependency "mini_racer", "~> 0.16"
+  s.add_dependency "binding_of_caller", ">= 1.0"
+  s.add_dependency "mini_racer", ">= 0.16"
 
   s.metadata = {
     "homepage_uri" => s.homepage,

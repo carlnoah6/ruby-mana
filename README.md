@@ -28,7 +28,7 @@ Or in your Gemfile:
 gem "ruby-mana"
 ```
 
-Requires Ruby 3.3+ and an API key (Anthropic, OpenAI, or compatible):
+Requires Ruby 3.3+ (including 4.0) and an API key (Anthropic, OpenAI, or compatible):
 
 ```bash
 export ANTHROPIC_API_KEY=your_key_here

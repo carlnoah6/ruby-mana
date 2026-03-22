@@ -32,6 +32,12 @@ unless PYCALL_AVAILABLE
           code.scan(/^(\w+)\s*[+\-*\/]?=/).each { |m| vars << m[0] }
           vars.uniq
         end
+
+        class RubyBridge
+          def initialize(binding)
+            @binding = binding
+          end
+        end
       end
     end
   end
@@ -291,7 +297,7 @@ RSpec.describe Mana::Engines::Python do
     end
   end
 
-  describe Mana::Engines::RubyBridge do
+  describe Mana::Engines::Python::RubyBridge, skip: !PYCALL_AVAILABLE && "pycall not available" do
     let(:receiver) do
       klass = Class.new do
         def greet(name)

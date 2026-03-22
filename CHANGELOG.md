@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.4] - 2026-03-22
+
+### Added
+- **Ruby 4.0 support** — relaxed `binding_of_caller` and `mini_racer` version constraints, CI now tests Ruby 3.3, 3.4, and 4.0
+
+### Fixed
+- Fixed `RubyBridge` constant path in Python engine spec
+- Fixed Python-dependent tests to skip gracefully when pycall is not available
+
 ## [0.5.3] - 2026-03-22
 
 ### Added
