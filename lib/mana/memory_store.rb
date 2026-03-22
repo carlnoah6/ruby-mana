@@ -60,14 +60,7 @@ module Mana
       custom_path = Mana.config.memory_path
       return File.join(custom_path, "memory") if custom_path
 
-      xdg = ENV["XDG_DATA_HOME"]
-      if xdg && !xdg.empty?
-        File.join(xdg, "mana", "memory")
-      elsif RUBY_PLATFORM.include?("darwin")
-        File.join(Dir.home, "Library", "Application Support", "mana", "memory")
-      else
-        File.join(Dir.home, ".local", "share", "mana", "memory")
-      end
+      File.join(Dir.home, ".mana", "memory")
     end
   end
 end
