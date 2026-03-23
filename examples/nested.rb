@@ -3,11 +3,6 @@
 # Example: Nested prompts — LLM calling LLM
 require "mana"
 
-Mana.configure do |c|
-  c.api_key = ENV["ANTHROPIC_API_KEY"]
-  c.model = "claude-sonnet-4-20250514"
-end
-
 # Lambda style — concise
 analyze_point = ->(point) { ~"analyze data point #{point}, identify the root cause, store in <cause>" }
 
