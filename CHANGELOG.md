@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.0] - 2026-03-23
+## [0.5.5] - 2026-03-23
 
 ### Added
 - **Configurable security policy** — 5 levels from `:sandbox` (0) to `:danger` (4), with fine-grained `allow_receiver`/`block_method` overrides
