@@ -47,6 +47,7 @@ module Mana
         # Build parameter signature for the generated method
         params_desc = describe_params(original)
 
+        old_verbose, $VERBOSE = $VERBOSE, nil
         owner.define_method(method_name) do |*args, **kwargs, &blk|
           # Generate implementation via LLM
           generated = compiler.generate(method_name, params_desc, prompt)
@@ -64,6 +65,7 @@ module Mana
           # Call the now-native method
           send(method_name, *args, **kwargs, &blk)
         end
+        $VERBOSE = old_verbose
       end
 
       # Generate Ruby method source via LLM
