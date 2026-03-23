@@ -133,6 +133,59 @@ while player_hp > 0 && enemy_hp > 0
 end
 ```
 
+### Nested prompts
+
+Functions called by LLM can themselves contain `~"..."` prompts:
+
+```ruby
+lint = ->(code) { ~"check #{code} for style issues, store in <issues>" }
+# Equivalent to:
+# def lint(code)
+#   ~"check #{code} for style issues, store in <issues>"
+#   issues
+# end
+
+~"review <codebase>, call lint for each file, store report in <report>"
+```
+
+Each nested call gets its own conversation context. The outer LLM only sees the function's return value, keeping its context clean.
+
+### LLM-compiled methods
+
+`mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
+
+```ruby
+mana def fizzbuzz(n)
+  ~"return an array of FizzBuzz results from 1 to n"
+end
+
+fizzbuzz(15)  # first call → LLM generates code → cached → executed
+fizzbuzz(20)  # pure Ruby from .mana_cache/fizzbuzz.rb
+
+# View the generated source
+puts Mana.source(:fizzbuzz)
+# def fizzbuzz(n)
+#   (1..n).map do |i|
+#     if i % 15 == 0 then "FizzBuzz"
+#     elsif i % 3 == 0 then "Fizz"
+#     elsif i % 5 == 0 then "Buzz"
+#     else i.to_s
+#     end
+#   end
+# end
+
+# Works in classes too
+class Converter
+  include Mana::Mixin
+
+  mana def celsius_to_fahrenheit(c)
+    ~"convert Celsius to Fahrenheit"
+  end
+end
+```
+
+Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to skip LLM on CI).
+
 ## Configuration
 
 All options can be set via environment variables (`.env` file) or `Mana.configure`:
@@ -439,59 +492,6 @@ end
 
 Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the stub to add.
 
-### Nested prompts
-
-Functions called by LLM can themselves contain `~"..."` prompts:
-
-```ruby
-lint = ->(code) { ~"check #{code} for style issues, store in <issues>" }
-# Equivalent to:
-# def lint(code)
-#   ~"check #{code} for style issues, store in <issues>"
-#   issues
-# end
-
-~"review <codebase>, call lint for each file, store report in <report>"
-```
-
-Each nested call gets its own conversation context. The outer LLM only sees the function's return value, keeping its context clean.
-
-### LLM-compiled methods
-
-`mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
-
-```ruby
-mana def fizzbuzz(n)
-  ~"return an array of FizzBuzz results from 1 to n"
-end
-
-fizzbuzz(15)  # first call → LLM generates code → cached → executed
-fizzbuzz(20)  # pure Ruby from .mana_cache/fizzbuzz.rb
-
-# View the generated source
-puts Mana.source(:fizzbuzz)
-# def fizzbuzz(n)
-#   (1..n).map do |i|
-#     if i % 15 == 0 then "FizzBuzz"
-#     elsif i % 3 == 0 then "Fizz"
-#     elsif i % 5 == 0 then "Buzz"
-#     else i.to_s
-#     end
-#   end
-# end
-
-# Works in classes too
-class Converter
-  include Mana::Mixin
-
-  mana def celsius_to_fahrenheit(c)
-    ~"convert Celsius to Fahrenheit"
-  end
-end
-```
-
-Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to skip LLM on CI).
-
 ## How it works
 
 1. `~"..."` calls `String#~@`, which captures the caller's `Binding`
@@ -502,9 +502,6 @@ Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to s
 6. Loop until LLM calls `done` or returns without tool calls
 7. After completion, memory compaction runs in background if context is getting large
 
-## Safety
-
-⚠️ Mana executes LLM-generated operations against your live Ruby state. Use with the same caution as `eval`.
 
 ## License
 
