@@ -77,10 +77,9 @@ module Mana
                         "Return ONLY the complete method definition (def...end), no explanation. " \
                         "Store the code as a string in <code>"
 
-        # Create isolated binding with only `code` variable visible
-        old_verbose, $VERBOSE = $VERBOSE, nil
-        isolated = Object.new.instance_eval { code = nil; binding }
-        $VERBOSE = old_verbose
+        # Create isolated binding with only `code` variable visible.
+        # Use eval to avoid "assigned but unused variable" parse-time warning.
+        isolated = Object.new.instance_eval { eval("code = nil; binding") }
         Mana::Engines::LLM.new(isolated).execute(engine_prompt)
 
         code = isolated.local_variable_get(:code)
