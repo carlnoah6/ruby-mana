@@ -74,11 +74,11 @@ module Mana
         },
         {
           name: "done",
-          description: "Signal that the task is complete.",
+          description: "Signal that the task is complete. Always include the result — this is the value returned to the Ruby program.",
           input_schema: {
             type: "object",
             properties: {
-              result: { description: "Optional return value" }
+              result: { description: "The answer or result to return. Always provide this." }
             }
           }
         }
@@ -271,7 +271,7 @@ module Mana
           "- Use write_var to create or update variables in the Ruby scope.",
           "- Use write_attr to set attributes on Ruby objects.",
           "- Use call_func to call Ruby methods listed below. Only call functions that are explicitly listed — do NOT guess or try to discover functions by calling methods like `methods`, `local_variables`, etc.",
-          "- Call done when the task is complete. If you cannot complete the task with the available tools, call done with an explanation.",
+          "- Call done(result: ...) when the task is complete. ALWAYS put the answer in the result field — it is the return value of ~\"...\". If no <var> is referenced, the done result is the only way to return a value.",
           "- When the user references <var>, that's a variable in scope.",
           "- If a referenced variable doesn't exist yet, the user expects you to create it with write_var.",
           "- Be precise with types: use numbers for numeric values, arrays for lists, strings for text.",
