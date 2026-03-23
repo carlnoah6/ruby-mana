@@ -75,6 +75,9 @@ module Mana
                         "Store the code as a string in <code>"
 
         Mana::Engines::LLM.new(b).execute(engine_prompt)
+
+        # LLM may return literal \n instead of real newlines — unescape them
+        code = code.gsub("\\n", "\n").gsub("\\\"", "\"").gsub("\\'", "'") if code.is_a?(String)
         code
       end
 
