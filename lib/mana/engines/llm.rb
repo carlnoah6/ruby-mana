@@ -143,6 +143,15 @@ module Mana
         memory&.wait_for_compaction
 
         messages = memory ? memory.short_term : []
+
+        # Ensure messages don't end with an unpaired tool_use (causes API 400 error).
+        # This can happen when short-term memory has leftover messages from a failed call.
+        while messages.last && messages.last[:role] == "assistant" &&
+              messages.last[:content].is_a?(Array) &&
+              messages.last[:content].any? { |b| (b[:type] || b["type"]) == "tool_use" }
+          messages.pop
+        end
+
         messages << { role: "user", content: prompt }
 
         iterations = 0
