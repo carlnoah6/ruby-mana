@@ -198,7 +198,7 @@ export MANA_MODEL=claude-sonnet-4-6                  # default model
 export MANA_VERBOSE=true                             # show LLM interactions
 export MANA_TIMEOUT=120                              # HTTP timeout in seconds
 export MANA_BACKEND=anthropic                        # force backend (anthropic/openai)
-export MANA_SECURITY=strict                          # security level (0-4 or name)
+export MANA_SECURITY=standard                        # security level (0-4 or name)
 ```
 
 | Environment Variable | Config | Default | Description |
@@ -211,7 +211,7 @@ export MANA_SECURITY=strict                          # security level (0-4 or na
 | `MANA_VERBOSE` | `c.verbose` | `false` | Log LLM calls to stderr |
 | `MANA_TIMEOUT` | `c.timeout` | `120` | HTTP timeout (seconds) |
 | `MANA_BACKEND` | `c.backend` | auto-detect | Force `anthropic` or `openai` |
-| `MANA_SECURITY` | `c.security` | `:strict` (1) | Security level: `sandbox`, `strict`, `standard`, `permissive`, `danger` |
+| `MANA_SECURITY` | `c.security` | `:standard` (2) | Security level: `sandbox`, `strict`, `standard`, `permissive`, `danger` |
 
 Programmatic config (overrides env vars):
 
@@ -277,11 +277,11 @@ Mana restricts what the LLM can call via security levels (higher = more permissi
 |-------|------|-----------------|----------------|
 | 0 | `:sandbox` | Read/write variables, call user-defined functions only | Everything else |
 | 1 | `:strict` | + safe stdlib (`Time.now`, `Date.today`, `Math.*`) | Filesystem, network, system calls, eval |
-| **2** | **`:standard`** | + read filesystem (`File.read`, `Dir.glob`) | Write/delete files, network, eval |
+| **2** | **`:standard`** (default) | + read filesystem (`File.read`, `Dir.glob`) | Write/delete files, network, eval |
 | 3 | `:permissive` | + write files, network, require | eval, system/exec/fork |
 | 4 | `:danger` | No restrictions | Nothing |
 
-Default is **level 1 (`:strict`)**. Set via config or env var:
+Default is **level 2 (`:standard`)**. Set via config or env var:
 
 ```ruby
 Mana.configure { |c| c.security = :standard }

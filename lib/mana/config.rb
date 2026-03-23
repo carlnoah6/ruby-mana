@@ -35,7 +35,7 @@ module Mana
       @verbose = %w[1 true yes].include?(ENV["MANA_VERBOSE"]&.downcase)
       @backend = ENV["MANA_BACKEND"]&.to_sym
       sec = ENV["MANA_SECURITY"]
-      @security_policy = SecurityPolicy.new(sec ? sec.to_sym : :strict)
+      @security_policy = SecurityPolicy.new(sec ? sec.to_sym : :standard)
       @namespace = nil
       @memory_store = nil
       @memory_path = nil

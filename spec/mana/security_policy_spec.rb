@@ -137,8 +137,8 @@ RSpec.describe Mana::SecurityPolicy do
   describe "config integration" do
     before { Mana.reset! }
 
-    it "defaults to strict" do
-      expect(Mana.config.security_policy.preset).to eq(:strict)
+    it "defaults to standard" do
+      expect(Mana.config.security_policy.preset).to eq(:standard)
     end
 
     it "sets by symbol" do
