@@ -68,16 +68,18 @@ module Mana
         $VERBOSE = old_verbose
       end
 
-      # Generate Ruby method source via LLM
+      # Generate Ruby method source via LLM.
+      # Uses an isolated binding so LLM cannot see Compiler internals.
       def generate(method_name, params_desc, prompt)
-        code = nil # pre-declare so binding captures it
-        b = binding
         engine_prompt = "Write a Ruby method definition `def #{method_name}(#{params_desc})` that: #{prompt}. " \
                         "Return ONLY the complete method definition (def...end), no explanation. " \
                         "Store the code as a string in <code>"
 
-        Mana::Engines::LLM.new(b).execute(engine_prompt)
+        # Create isolated binding with only `code` variable visible
+        isolated = Object.new.instance_eval { code = nil; binding }
+        Mana::Engines::LLM.new(isolated).execute(engine_prompt)
 
+        code = isolated.local_variable_get(:code)
         # LLM may return literal \n instead of real newlines — unescape them
         code = code.gsub("\\n", "\n").gsub("\\\"", "\"").gsub("\\'", "'") if code.is_a?(String)
         code
