@@ -236,10 +236,6 @@ Mana.configure { |c| c.security = :standard }
 Mana.configure { |c| c.security = 2 }
 ```
 
-```bash
-export MANA_SECURITY=standard
-```
-
 Fine-grained overrides:
 
 ```ruby
