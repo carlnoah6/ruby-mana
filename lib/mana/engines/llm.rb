@@ -384,18 +384,31 @@ module Mana
           args = input["args"] || []
           policy = @config.security_policy
 
-          # Handle Class.method calls (e.g. Time.now, Date.today, File.read)
+          # Handle chained calls (e.g. Time.now, Time.now.to_s, File.read)
           if func.include?(".")
-            parts = func.split(".", 2)
-            if policy.receiver_call_blocked?(parts[0], parts[1])
-              raise NameError, "'#{func}' is blocked by security policy (level #{policy.level}: #{policy.preset})"
+            # Split into receiver constant and first method for security check
+            # e.g. "Time.now.to_s" → check "Time" + "now", then chain ".to_s"
+            first_dot = func.index(".")
+            receiver_name = func[0...first_dot]
+            rest = func[(first_dot + 1)..]
+            methods_chain = rest.split(".")
+            first_method = methods_chain.first
+
+            if policy.receiver_call_blocked?(receiver_name, first_method)
+              raise NameError, "'#{receiver_name}.#{first_method}' is blocked by security policy (level #{policy.level}: #{policy.preset})"
             end
-            if policy.method_blocked?(parts[1])
-              raise NameError, "'#{parts[1]}' is blocked by security policy"
+            if policy.method_blocked?(first_method)
+              raise NameError, "'#{first_method}' is blocked by security policy"
             end
 
-            receiver = @binding.eval(parts[0]) rescue raise(NameError, "unknown constant '#{parts[0]}'")
-            result = receiver.public_send(parts[1].to_sym, *args)
+            receiver = @binding.eval(receiver_name) rescue raise(NameError, "unknown constant '#{receiver_name}'")
+            result = receiver.public_send(first_method.to_sym, *args)
+
+            # Chain remaining methods (e.g. .to_s, .strftime)
+            methods_chain[1..].each do |m|
+              result = result.public_send(m.to_sym)
+            end
+
             vlog("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) → #{result.inspect}")
             return serialize_value(result)
           end
@@ -493,6 +506,8 @@ module Mana
 
       def serialize_value(val)
         case val
+        when Time
+          val.strftime("%Y-%m-%d %H:%M:%S %z").inspect
         when String, Integer, Float, TrueClass, FalseClass, NilClass
           val.inspect
         when Symbol
