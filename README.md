@@ -145,6 +145,7 @@ export MANA_MODEL=claude-sonnet-4-6                  # default model
 export MANA_VERBOSE=true                             # show LLM interactions
 export MANA_TIMEOUT=120                              # HTTP timeout in seconds
 export MANA_BACKEND=anthropic                        # force backend (anthropic/openai)
+export MANA_SECURITY=strict                          # security level (0-4 or name)
 ```
 
 | Environment Variable | Config | Default | Description |
