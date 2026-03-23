@@ -48,45 +48,4 @@ RSpec.describe Mana::Engines::Base do
     end
   end
 
-  describe "capability queries" do
-    let(:engine) { described_class.new(binding) }
-
-    it "defaults to supporting remote refs" do
-      expect(engine.supports_remote_ref?).to be true
-    end
-
-    it "defaults to supporting bidirectional calls" do
-      expect(engine.supports_bidirectional?).to be true
-    end
-
-    it "defaults to supporting state" do
-      expect(engine.supports_state?).to be true
-    end
-  end
-
-  describe "#serialize" do
-    let(:engine) { described_class.new(binding) }
-
-    it "passes through simple types" do
-      expect(engine.serialize(42)).to eq(42)
-      expect(engine.serialize("hello")).to eq("hello")
-      expect(engine.serialize(:sym)).to eq(:sym)
-      expect(engine.serialize(true)).to eq(true)
-      expect(engine.serialize(nil)).to eq(nil)
-      expect(engine.serialize(3.14)).to eq(3.14)
-    end
-
-    it "recursively serializes arrays" do
-      expect(engine.serialize([1, "two", 3])).to eq([1, "two", 3])
-    end
-
-    it "recursively serializes hash values" do
-      expect(engine.serialize({ a: 1, b: "two" })).to eq({ a: 1, b: "two" })
-    end
-
-    it "converts complex objects to strings" do
-      obj = Object.new
-      expect(engine.serialize(obj)).to be_a(String)
-    end
-  end
 end

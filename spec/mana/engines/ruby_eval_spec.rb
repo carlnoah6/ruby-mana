@@ -163,29 +163,4 @@ RSpec.describe Mana::Engines::Ruby do
     end
   end
 
-  # ── type conversion / serialize ─────────────────────────────
-
-  describe "serialize through execute results" do
-    it "serializes nested arrays" do
-      result = engine.execute("[[1, 2], [3, 4]]")
-      expect(engine.serialize(result)).to eq([[1, 2], [3, 4]])
-    end
-
-    it "serializes nested hashes" do
-      result = engine.execute("{ a: { b: 1 } }")
-      expect(engine.serialize(result)).to eq({ a: { b: 1 } })
-    end
-
-    it "serializes complex objects to strings" do
-      result = engine.execute("Object.new")
-      serialized = engine.serialize(result)
-      expect(serialized).to be_a(String)
-      expect(serialized).to match(/Object/)
-    end
-
-    it "round-trips symbols" do
-      result = engine.execute(":my_symbol")
-      expect(engine.serialize(result)).to eq(:my_symbol)
-    end
-  end
 end

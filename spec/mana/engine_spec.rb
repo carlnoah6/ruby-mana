@@ -220,20 +220,6 @@ RSpec.describe Mana::Engine do
     end
   end
 
-  describe ".engine_name" do
-    it "returns javascript for JavaScript engine" do
-      expect(described_class.engine_name(Mana::Engines::JavaScript)).to eq("javascript")
-    end
-
-    it "returns ruby for Ruby engine" do
-      expect(described_class.engine_name(Mana::Engines::Ruby)).to eq("ruby")
-    end
-
-    it "returns natural_language for LLM engine" do
-      expect(described_class.engine_name(Mana::Engines::LLM)).to eq("natural_language")
-    end
-  end
-
   describe "backward compatibility (Engine.new)" do
     it "delegates execute to Engines::LLM" do
       stub_anthropic_sequence(

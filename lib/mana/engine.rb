@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
 module Mana
-  # Top-level dispatcher that routes ~"..." prompts to the appropriate engine.
-  #
-  # Flow: prompt → mock check → language detection → engine execution
-  #
+  # Routes ~"..." prompts to the LLM engine.
   # Also serves as a backward-compatibility wrapper — older code that
   # instantiates Engine directly is delegated to Engines::LLM.
   class Engine
@@ -15,29 +12,11 @@ module Mana
           return Engines::LLM.new(caller_binding).handle_mock(prompt)
         end
 
-        # Detect language engine
-        engine_class = detect_engine(prompt)
-        Thread.current[:mana_last_engine] = engine_name(engine_class)
-
-        # Create engine and execute
-        engine = engine_class.new(caller_binding)
+        engine = Engines::LLM.new(caller_binding)
         engine.execute(prompt)
       end
 
-      def detect_engine(code)
-        Engines.detect(code, context: Thread.current[:mana_last_engine])
-      end
-
-      def engine_name(klass)
-        case klass.name
-        when /JavaScript/ then "javascript"
-        when /Python/ then "python"
-        when /Ruby/ then "ruby"
-        else "natural_language"
-        end
-      end
-
-      # Delegate to LLM engine for backward compatibility
+      # Delegate to LLM engine
       def handler_stack
         Engines::LLM.handler_stack
       end
@@ -52,7 +31,6 @@ module Mana
     end
 
     # Backward compatibility: Engine.new(prompt, binding) delegates to Engines::LLM
-    # Some tests instantiate Engine directly and call private methods
     def initialize(prompt, caller_binding)
       @delegate = Engines::LLM.new(caller_binding)
       @prompt = prompt
