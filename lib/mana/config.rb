@@ -16,7 +16,7 @@ module Mana
                   :namespace, :memory_store, :memory_path,
                   :context_window, :memory_pressure, :memory_keep_recent,
                   :compact_model, :on_compact
-    attr_reader :timeout
+    attr_reader :timeout, :security_policy
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
@@ -34,6 +34,8 @@ module Mana
       @timeout = (ENV["MANA_TIMEOUT"] || 120).to_i
       @verbose = %w[1 true yes].include?(ENV["MANA_VERBOSE"]&.downcase)
       @backend = ENV["MANA_BACKEND"]&.to_sym
+      sec = ENV["MANA_SECURITY"]
+      @security_policy = SecurityPolicy.new(sec ? sec.to_sym : :strict)
       @namespace = nil
       @memory_store = nil
       @memory_path = nil
@@ -50,6 +52,18 @@ module Mana
       end
 
       @timeout = value
+    end
+
+    # Accept Symbol (:strict), Integer (1), or SecurityPolicy instance
+    def security=(value)
+      case value
+      when SecurityPolicy
+        @security_policy = value
+      when Symbol, Integer
+        @security_policy = SecurityPolicy.new(value)
+      else
+        raise ArgumentError, "security must be a Symbol, Integer, or SecurityPolicy, got #{value.class}"
+      end
     end
 
     # Resolve the effective base URL based on the configured or auto-detected backend.

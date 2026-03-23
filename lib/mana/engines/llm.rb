@@ -382,23 +382,17 @@ module Mana
         when "call_func"
           func = input["name"]
           args = input["args"] || []
+          policy = @config.security_policy
 
-          # Block Ruby introspection/dangerous methods
-          blocked = %w[
-            methods singleton_methods private_methods protected_methods public_methods
-            instance_variables instance_variable_get instance_variable_set remove_instance_variable
-            local_variables global_variables
-            send __send__ public_send eval instance_eval instance_exec class_eval module_eval
-            system exec fork spawn ` require require_relative load
-            exit exit! abort at_exit
-          ]
-
-          # Handle Class.method calls (e.g. Time.now, Date.today)
+          # Handle Class.method calls (e.g. Time.now, Date.today, File.read)
           if func.include?(".")
             parts = func.split(".", 2)
-            blocked_receivers = %w[File Dir IO Kernel Process ObjectSpace ENV]
-            raise NameError, "'#{func}' is not callable" if blocked_receivers.include?(parts[0])
-            raise NameError, "'#{func}' is not callable" if blocked.include?(parts[1])
+            if policy.receiver_call_blocked?(parts[0], parts[1])
+              raise NameError, "'#{func}' is blocked by security policy (level #{policy.level}: #{policy.preset})"
+            end
+            if policy.method_blocked?(parts[1])
+              raise NameError, "'#{parts[1]}' is blocked by security policy"
+            end
 
             receiver = @binding.eval(parts[0]) rescue raise(NameError, "unknown constant '#{parts[0]}'")
             result = receiver.public_send(parts[1].to_sym, *args)
@@ -407,8 +401,8 @@ module Mana
           end
 
           validate_name!(func)
-          if blocked.include?(func)
-            raise NameError, "'#{func}' is not callable — only user-defined functions are allowed"
+          if policy.method_blocked?(func)
+            raise NameError, "'#{func}' is blocked by security policy (level #{policy.level}: #{policy.preset})"
           end
 
           # Try local variable (lambdas/procs) first, then receiver methods

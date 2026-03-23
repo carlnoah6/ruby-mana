@@ -2,6 +2,7 @@
 
 require_relative "mana/version"
 require_relative "mana/config"
+require_relative "mana/security_policy"
 require_relative "mana/backends/base"
 require_relative "mana/backends/anthropic"
 require_relative "mana/backends/openai"
