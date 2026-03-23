@@ -157,6 +157,7 @@ export MANA_BACKEND=anthropic                        # force backend (anthropic/
 | `MANA_VERBOSE` | `c.verbose` | `false` | Log LLM calls to stderr |
 | `MANA_TIMEOUT` | `c.timeout` | `120` | HTTP timeout (seconds) |
 | `MANA_BACKEND` | `c.backend` | auto-detect | Force `anthropic` or `openai` |
+| `MANA_SECURITY` | `c.security` | `:strict` (1) | Security level: `sandbox`, `strict`, `standard`, `permissive`, `danger` |
 
 Programmatic config (overrides env vars):
 
@@ -167,6 +168,7 @@ Mana.configure do |c|
   c.api_key = "sk-..."
   c.verbose = true
   c.timeout = 120
+  c.security = :strict            # security level (0-4 or symbol)
 
   # Memory settings
   c.namespace = "my-project"      # nil = auto-detect from git/pwd
