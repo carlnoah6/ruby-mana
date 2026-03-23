@@ -27,6 +27,18 @@ RSpec.describe Mana::Compiler do
       expect(result).to include("def greet")
       expect(result).to include("Hello")
     end
+
+    it "unescapes literal \\n from LLM-generated code" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var",
+           input: { "name" => "code", "value" => 'def add(a, b)\n  a + b\nend' } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      result = described_class.generate(:add, "a, b", "add two numbers")
+      expect(result).to include("def add(a, b)\n  a + b\nend")
+      expect(result).not_to include('\\n')
+    end
   end
 
   describe ".write_cache" do
