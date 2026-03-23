@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.0] - 2026-03-23
+
+### Added
+- **Configurable security policy** — 5 levels from `:sandbox` (0) to `:danger` (4), with fine-grained `allow_receiver`/`block_method` overrides
+- **Environment variable config** — `MANA_MODEL`, `MANA_VERBOSE`, `MANA_TIMEOUT`, `MANA_BACKEND`, `MANA_SECURITY`
+- **Verbose mode** — `c.verbose = true` logs LLM calls, tool usage, and results to stderr
+- **API key validation** — clear `ConfigError` with setup instructions instead of cryptic HTTP 401
+- **Long-term memory deduplication** — identical content is no longer stored twice
+- **Current prompt overrides memory** — explicit priority rule in system prompt
+
+### Fixed
+- `write_var` now works on Ruby 4.0 without pre-declaring variables (singleton method fallback)
+- Blocked Ruby introspection methods (`methods`, `local_variables`, etc.) in `call_func`
+- LLM retries once when model skips tool calling and returns text only
+- Suppressed "method redefined" warnings in write_var
+- Long-term memory stored in `~/.mana/` instead of platform-specific paths
+- Default model changed to `claude-sonnet-4-6`
+
 ## [0.5.4] - 2026-03-22
 
 ### Added

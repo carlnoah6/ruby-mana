@@ -213,6 +213,41 @@ end
 
 Backend is auto-detected from model name: `claude-*` → Anthropic, everything else → OpenAI.
 
+### Security policy
+
+Mana restricts what the LLM can call via security levels (higher = more permissions):
+
+| Level | Name | What LLM Can Do | What's Blocked |
+|-------|------|-----------------|----------------|
+| 0 | `:sandbox` | Read/write variables, call user-defined functions only | Everything else |
+| 1 | `:strict` | + safe stdlib (`Time.now`, `Date.today`, `Math.*`) | Filesystem, network, system calls, eval |
+| **2** | **`:standard`** | + read filesystem (`File.read`, `Dir.glob`) | Write/delete files, network, eval |
+| 3 | `:permissive` | + write files, network, require | eval, system/exec/fork |
+| 4 | `:danger` | No restrictions | Nothing |
+
+Default is **level 1 (`:strict`)**. Set via config or env var:
+
+```ruby
+Mana.configure { |c| c.security = :standard }
+# or
+Mana.configure { |c| c.security = 2 }
+```
+
+```bash
+export MANA_SECURITY=standard
+```
+
+Fine-grained overrides:
+
+```ruby
+Mana.configure do |c|
+  c.security = :strict
+  c.security_policy.allow_receiver "File", only: %w[read exist?]
+  c.security_policy.block_method "puts"
+  c.security_policy.block_receiver "Net::HTTP"
+end
+```
+
 ### Custom effect handlers
 
 Define your own tools that the LLM can call. Each effect becomes an LLM tool automatically — the block's keyword parameters define the tool's input schema.
