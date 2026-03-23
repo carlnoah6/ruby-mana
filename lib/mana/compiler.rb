@@ -60,7 +60,9 @@ module Mana
 
           # Define the method on the correct owner (not Object) via class_eval
           target_owner = owner
+          v, $VERBOSE = $VERBOSE, nil
           target_owner.class_eval(generated, cache_path, 1)
+          $VERBOSE = v
 
           # Call the now-native method
           send(method_name, *args, **kwargs, &blk)
