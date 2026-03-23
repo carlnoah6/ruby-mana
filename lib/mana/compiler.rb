@@ -76,7 +76,9 @@ module Mana
                         "Store the code as a string in <code>"
 
         # Create isolated binding with only `code` variable visible
+        old_verbose, $VERBOSE = $VERBOSE, nil
         isolated = Object.new.instance_eval { code = nil; binding }
+        $VERBOSE = old_verbose
         Mana::Engines::LLM.new(isolated).execute(engine_prompt)
 
         code = isolated.local_variable_get(:code)
