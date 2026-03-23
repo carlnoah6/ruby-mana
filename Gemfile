@@ -12,4 +12,5 @@ group :development, :test do
   gem "rspec", "~> 3.13"
   gem "rubocop", "~> 1.68"
   gem "webmock", "~> 3.24"
+  gem "simplecov", require: false
 end

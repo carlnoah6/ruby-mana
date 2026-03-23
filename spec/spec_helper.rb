@@ -1,5 +1,11 @@
 # frozen_string_literal: true
 
+require "simplecov"
+SimpleCov.start do
+  add_filter "/spec/"
+  track_files "lib/**/*.rb"
+end
+
 require "webmock/rspec"
 require "tempfile"
 require "tmpdir"

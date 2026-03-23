@@ -63,6 +63,92 @@ RSpec.describe Mana::Engines::LLM do
     end
   end
 
+  describe "call_func with dotted methods" do
+    it "allows Class.method calls like Time.now" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "Time.now" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("get time")
+      expect(result).to eq("ok")
+    end
+
+    it "allows chained calls like Time.now.to_s" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "Time.now.to_s" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("get time string")
+      expect(result).to eq("ok")
+    end
+
+    it "blocks receiver calls per security policy" do
+      Mana.config.security = :strict
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "File.read", "args" => ["/etc/hosts"] } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      # Should not raise — error is caught and returned as tool result
+      engine.execute("read file")
+    end
+
+    it "blocks methods per security policy" do
+      Mana.config.security = :strict
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "eval" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      engine.execute("eval something")
+    end
+  end
+
+  describe "serialize_value" do
+    it "serializes Time objects as readable strings" do
+      b = binding
+      engine = described_class.new(b)
+      result = engine.send(:serialize_value, Time.new(2026, 3, 23, 12, 0, 0, "+08:00"))
+      expect(result).to include("2026-03-23")
+      expect(result).to include("12:00:00")
+    end
+  end
+
+  describe "verbose mode" do
+    it "logs to stderr when verbose is true" do
+      Mana.config.verbose = true
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      expect { engine.execute("test") }.to output(/LLM call/).to_stderr
+      Mana.config.verbose = false
+    end
+
+    it "does not log when verbose is false" do
+      Mana.config.verbose = false
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      expect { engine.execute("test") }.not_to output.to_stderr
+    end
+  end
+
   describe "#handle_mock" do
     it "matches and returns stubbed values" do
       Mana.mock!

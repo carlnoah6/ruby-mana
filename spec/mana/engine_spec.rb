@@ -220,6 +220,48 @@ RSpec.describe Mana::Engine do
     end
   end
 
+  describe ".engine_name" do
+    it "returns javascript for JavaScript engine" do
+      expect(described_class.engine_name(Mana::Engines::JavaScript)).to eq("javascript")
+    end
+
+    it "returns ruby for Ruby engine" do
+      expect(described_class.engine_name(Mana::Engines::Ruby)).to eq("ruby")
+    end
+
+    it "returns natural_language for LLM engine" do
+      expect(described_class.engine_name(Mana::Engines::LLM)).to eq("natural_language")
+    end
+  end
+
+  describe "backward compatibility (Engine.new)" do
+    it "delegates execute to Engines::LLM" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "delegated" } }]
+      )
+
+      b = binding
+      engine = described_class.new("test", b)
+      result = engine.execute
+      expect(result).to eq("delegated")
+    end
+
+    it "delegates unknown methods via method_missing" do
+      b = binding
+      engine = described_class.new("test", b)
+      # build_context is a private method on Engines::LLM
+      ctx = engine.send(:build_context, "use <x>")
+      expect(ctx).to be_a(Hash)
+    end
+
+    it "responds to delegated methods" do
+      b = binding
+      engine = described_class.new("test", b)
+      expect(engine.respond_to?(:build_context, true)).to be true
+      expect(engine.respond_to?(:nonexistent_method_xyz)).to be false
+    end
+  end
+
   describe "#build_context" do
     it "reads existing variables referenced in prompt" do
       engine = Mana::Engine.new("use <x> and <y>", binding.tap { |b|
