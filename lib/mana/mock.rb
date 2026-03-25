@@ -16,18 +16,24 @@ module Mana
 
     attr_reader :stubs
 
+    # Initialize with an empty stub list
     def initialize
       @stubs = []
     end
 
+    # Register a stub: when a prompt matches `pattern`, return `values` or call `block`
     def prompt(pattern, **values, &block)
       @stubs << Stub.new(pattern: pattern, values: values, block: block)
     end
 
+    # Find the first stub that matches the given prompt text.
+    # Regexp patterns use match?, String patterns use include?.
     def match(prompt_text)
       @stubs.find do |stub|
         case stub.pattern
+        # Regex: full pattern match
         when Regexp then prompt_text.match?(stub.pattern)
+        # String: substring match
         when String then prompt_text.include?(stub.pattern)
         end
       end
@@ -35,27 +41,34 @@ module Mana
   end
 
   class << self
+    # Run a block with a mock active. Stubs defined inside are scoped to this block.
+    # The block is instance_eval'd on the Mock so `prompt` is available as DSL.
     def mock(&block)
       old_mock = Thread.current[:mana_mock]
       m = Mock.new
       Thread.current[:mana_mock] = m
       m.instance_eval(&block)
+    # Always restore the previous mock (supports nesting)
     ensure
       Thread.current[:mana_mock] = old_mock
     end
 
+    # Enable mock mode (for use with before/after hooks in tests)
     def mock!
       Thread.current[:mana_mock] = Mock.new
     end
 
+    # Disable mock mode and restore normal LLM calls
     def unmock!
       Thread.current[:mana_mock] = nil
     end
 
+    # Check if mock mode is currently active on this thread
     def mock_active?
       !Thread.current[:mana_mock].nil?
     end
 
+    # Returns the current thread's Mock instance, or nil if not in mock mode
     def current_mock
       Thread.current[:mana_mock]
     end

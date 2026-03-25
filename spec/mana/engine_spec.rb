@@ -81,7 +81,6 @@ RSpec.describe Mana::Engine do
     end
 
     it "raises on max iterations exceeded" do
-      # Always return a tool call, never done
       stub_request(:post, "https://api.anthropic.com/v1/messages")
         .to_return(
           status: 200,
@@ -127,7 +126,6 @@ RSpec.describe Mana::Engine do
       )
 
       b = binding
-      # Should not raise — error is caught and returned to LLM
       expect { Mana::Engine.run("try injection", b) }.not_to raise_error
     end
 
@@ -214,46 +212,33 @@ RSpec.describe Mana::Engine do
         Mana::Engine.run("remember this", b)
       end
 
-      # Create memory after incognito — should be empty
       memory = Mana.memory
       expect(memory.long_term).to be_empty
     end
   end
 
-  describe "backward compatibility (Engine.new)" do
-    it "delegates execute to Engines::LLM" do
+  describe "#execute" do
+    it "runs the tool-calling loop and returns written variable value" do
       stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "delegated" } }]
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "x", "value" => 42 } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
       )
 
       b = binding
-      engine = described_class.new("test", b)
-      result = engine.execute
-      expect(result).to eq("delegated")
-    end
-
-    it "delegates unknown methods via method_missing" do
-      b = binding
-      engine = described_class.new("test", b)
-      # build_context is a private method on Engines::LLM
-      ctx = engine.send(:build_context, "use <x>")
-      expect(ctx).to be_a(Hash)
-    end
-
-    it "responds to delegated methods" do
-      b = binding
-      engine = described_class.new("test", b)
-      expect(engine.respond_to?(:build_context, true)).to be true
-      expect(engine.respond_to?(:nonexistent_method_xyz)).to be false
+      engine = described_class.new(b)
+      result = engine.execute("set <x> to 42")
+      expect(result).to eq(42)
+      expect(b.local_variable_get(:x)).to eq(42)
     end
   end
 
   describe "#build_context" do
     it "reads existing variables referenced in prompt" do
-      engine = Mana::Engine.new("use <x> and <y>", binding.tap { |b|
+      b = binding.tap { |b|
         b.local_variable_set(:x, 42)
         b.local_variable_set(:y, "hello")
-      })
+      }
+      engine = described_class.new(b)
 
       ctx = engine.send(:build_context, "use <x> and <y>")
       expect(ctx["x"]).to eq("42")
@@ -262,14 +247,14 @@ RSpec.describe Mana::Engine do
 
     it "skips variables that don't exist yet" do
       b = binding
-      engine = Mana::Engine.new("store in <new_var>", b)
+      engine = described_class.new(b)
       ctx = engine.send(:build_context, "store in <new_var>")
       expect(ctx).to be_empty
     end
   end
 
   describe "#serialize_value" do
-    let(:engine) { Mana::Engine.new("test", binding) }
+    let(:engine) { described_class.new(binding) }
 
     it "serializes primitives" do
       expect(engine.send(:serialize_value, 42)).to eq("42")
@@ -295,6 +280,100 @@ RSpec.describe Mana::Engine do
       result = engine.send(:serialize_value, obj)
       expect(result).to include("name")
       expect(result).to include("Alice")
+    end
+
+    it "serializes Time objects as readable strings" do
+      result = engine.send(:serialize_value, Time.new(2026, 3, 23, 12, 0, 0, "+08:00"))
+      expect(result).to include("2026-03-23")
+      expect(result).to include("12:00:00")
+    end
+  end
+
+  describe "call_func with dotted methods" do
+    it "allows Class.method calls like Time.now" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "Time.now" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("get time")
+      expect(result).to eq("ok")
+    end
+
+    it "allows chained calls like Time.now.to_s" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "Time.now.to_s" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("get time string")
+      expect(result).to eq("ok")
+    end
+
+    it "blocks receiver calls per security policy" do
+      Mana.config.security = :strict
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "File.read", "args" => ["/etc/hosts"] } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      engine.execute("read file")
+    end
+
+    it "blocks methods per security policy" do
+      Mana.config.security = :strict
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "eval" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      engine.execute("eval something")
+    end
+  end
+
+  describe "verbose mode" do
+    it "logs to stderr when verbose is true" do
+      Mana.config.verbose = true
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      expect { engine.execute("test") }.to output(/LLM call/).to_stderr
+      Mana.config.verbose = false
+    end
+
+    it "does not log when verbose is false" do
+      Mana.config.verbose = false
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      engine = described_class.new(b)
+      expect { engine.execute("test") }.not_to output.to_stderr
+    end
+  end
+
+  describe "#handle_mock" do
+    it "matches and returns stubbed values" do
+      Mana.mock do |m|
+        m.prompt "test", value: 42
+
+        b = binding
+        engine = Mana::Engine.new(b)
+        engine.handle_mock("test prompt")
+        expect(b.local_variable_get(:value)).to eq(42)
+      end
     end
   end
 
@@ -336,8 +415,8 @@ RSpec.describe Mana::Engine do
       tools = Mana::Engine.all_tools
       names = tools.map { |t| t[:name] }
       expect(names).to include("custom_tool")
-      expect(names).to include("read_var") # built-ins still there
-      expect(names).to include("remember") # remember tool present
+      expect(names).to include("read_var")
+      expect(names).to include("remember")
     end
 
     it "excludes remember tool in incognito mode" do
@@ -345,7 +424,7 @@ RSpec.describe Mana::Engine do
         tools = Mana::Engine.all_tools
         names = tools.map { |t| t[:name] }
         expect(names).not_to include("remember")
-        expect(names).to include("read_var") # built-ins still there
+        expect(names).to include("read_var")
       end
     end
   end
