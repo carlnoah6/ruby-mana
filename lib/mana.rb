@@ -47,7 +47,6 @@ module Mana
       EffectRegistry.clear!
       Thread.current[:mana_memory] = nil
       Thread.current[:mana_mock] = nil
-      Thread.current[:mana_last_engine] = nil
     end
 
     # Define a custom effect that becomes an LLM tool

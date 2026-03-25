@@ -57,11 +57,6 @@ RSpec.describe Mana do
       expect(Mana::EffectRegistry.tool_definitions).to be_empty
     end
 
-    it "clears last engine context" do
-      Thread.current[:mana_last_engine] = "llm"
-      Mana.reset!
-      expect(Thread.current[:mana_last_engine]).to be_nil
-    end
   end
 
   describe ".memory" do

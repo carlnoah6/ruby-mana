@@ -433,6 +433,10 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
       <h3>Level 3 — <code>:permissive</code></h3>
       <p>+ write files, network, require. Only eval/exec/fork blocked.</p>
     </div>
+    <div class="card">
+      <h3>Level 4 — <code>:danger</code></h3>
+      <p>No restrictions at all. Use only in fully trusted environments.</p>
+    </div>
   </div>
 
 <pre>Mana.configure <span class="kw">do</span> |c|

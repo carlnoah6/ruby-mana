@@ -526,9 +526,9 @@ module Mana
       if @binding.local_variable_defined?(name.to_sym)
         # Found as a local variable in the caller's binding
         @binding.local_variable_get(name.to_sym)
-      elsif @binding.receiver.respond_to?(name.to_sym, true)
-        # Found as a method on the caller's self (instance method, attr_reader, etc.)
-        @binding.receiver.send(name.to_sym)
+      elsif @binding.receiver.respond_to?(name.to_sym)
+        # Found as a public method on the caller's self
+        @binding.receiver.public_send(name.to_sym)
       else
         raise NameError, "undefined variable or method '#{name}'"
       end
@@ -637,8 +637,14 @@ module Mana
       return [] unless content.is_a?(Array)
 
       content
-        .select { |block| block[:type] == "tool_use" }
-        .map { |block| { id: block[:id], name: block[:name], input: block[:input] || {} } }
+        .select { |block| (block[:type] || block["type"]) == "tool_use" }
+        .map { |block|
+          {
+            id: block[:id] || block["id"],
+            name: block[:name] || block["name"],
+            input: block[:input] || block["input"] || {}
+          }
+        }
     end
   end
 end

@@ -56,8 +56,8 @@ module Mana
         kwargs = {}
         @params.each do |param|
           key = param[:name]
+          # LLM provided a value for this parameter
           if input.key?(key)
-            # LLM provided a value for this parameter
             kwargs[key.to_sym] = input[key]
           elsif param[:default] != :__mana_no_default__
             # Optional parameter — let the block use its own default
@@ -66,8 +66,8 @@ module Mana
           end
         end
 
+        # Call the handler: no-arg or with keyword args
         if kwargs.empty? && @params.empty?
-          # No-argument handler
           @handler.call
         else
           @handler.call(**kwargs)
@@ -82,6 +82,7 @@ module Mana
         return [] unless block
 
         block.parameters.map do |(type, name)|
+          # Map Ruby parameter types to schema metadata
           case type
           when :keyreq
             # Required keyword parameter (e.g. `sql:`)
@@ -100,7 +101,8 @@ module Mana
         end.compact
       end
 
-      # Infer JSON schema type from a Ruby default value
+      # Infer JSON schema type from a Ruby default value.
+      # Maps Ruby types to their JSON schema equivalents; defaults to "string".
       def infer_type(default)
         case default
         when Integer then "integer"

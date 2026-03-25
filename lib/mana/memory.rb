@@ -240,41 +240,24 @@ module Mana
     end
 
     # Call the LLM to produce a concise summary of the given conversation text.
+    # Uses the configured backend (Anthropic/OpenAI), respects timeout settings.
     # Falls back to "Summary unavailable" on any error.
     def summarize(text)
       config = Mana.config
-      # Use a dedicated compact model if configured, otherwise the default model
       model = config.compact_model || config.model
-      uri = URI("#{config.base_url}/v1/messages")
+      backend = Mana::Backends.for(config)
 
-      body = {
-        model: model,
-        max_tokens: 1024,
+      content = backend.chat(
         system: "Summarize this conversation concisely. Preserve key facts, decisions, and context.",
-        messages: [{ role: "user", content: text }]
-      }
+        messages: [{ role: "user", content: text }],
+        tools: [],
+        model: model,
+        max_tokens: 1024
+      )
 
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == "https"
-      http.read_timeout = 60
-
-      req = Net::HTTP::Post.new(uri)
-      req["Content-Type"] = "application/json"
-      req["x-api-key"] = config.api_key
-      req["anthropic-version"] = "2023-06-01"
-      req.body = JSON.generate(body)
-
-      res = http.request(req)
-      # Non-2xx response — can't summarize
-      return "Summary unavailable" unless res.is_a?(Net::HTTPSuccess)
-
-      parsed = JSON.parse(res.body, symbolize_names: true)
-      content = parsed[:content]
-      # Unexpected response shape — can't extract text
       return "Summary unavailable" unless content.is_a?(Array)
 
-      content.map { |b| b[:text] }.compact.join("\n")
-    # Network errors, JSON parse failures, etc. — degrade gracefully
+      content.map { |b| b[:text] || b["text"] }.compact.join("\n")
     rescue => _e
       "Summary unavailable"
     end

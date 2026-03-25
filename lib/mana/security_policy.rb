@@ -7,8 +7,8 @@ module Mana
   #
   # Five levels (higher = more permissions, each includes all below):
   #   0 :sandbox    — variables and user functions only
-  #   1 :strict     — + safe stdlib (Time, Date, Math) [default]
-  #   2 :standard   — + read filesystem (File.read, Dir.glob)
+  #   1 :strict     — + safe stdlib (Time, Date, Math)
+  #   2 :standard   — + read filesystem (File.read, Dir.glob) [default]
   #   3 :permissive — + write files, network, require
   #   4 :danger     — no restrictions
   #

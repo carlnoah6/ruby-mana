@@ -4,7 +4,7 @@ module Mana
   # Central configuration for Mana. Set via Mana.configure { |c| ... }.
   #
   # Key options:
-  #   model            - LLM model name (default: claude-sonnet-4)
+  #   model            - LLM model name (default: claude-sonnet-4-6)
   #   api_key          - API key, falls back to ANTHROPIC_API_KEY or OPENAI_API_KEY env vars
   #   base_url         - Custom API endpoint, falls back to ANTHROPIC_API_URL or OPENAI_API_URL
   #   backend          - :anthropic, :openai, or nil (auto-detect from model name)
