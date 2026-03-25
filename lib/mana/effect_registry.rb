@@ -16,6 +16,7 @@ module Mana
     class EffectDefinition
       attr_reader :name, :description, :handler, :params
 
+      # Initialize an effect with a name, optional description, and handler block
       def initialize(name, description: nil, &handler)
         @name = name.to_s
         @description = description || @name
@@ -23,11 +24,12 @@ module Mana
         @params = extract_params(handler)
       end
 
-      # Convert to LLM tool definition
+      # Convert to LLM tool definition (JSON schema for the LLM to call)
       def to_tool
         properties = {}
         required = []
 
+        # Build JSON schema properties from extracted block parameters
         @params.each do |param|
           properties[param[:name]] = {
             type: infer_type(param[:default]),
@@ -48,21 +50,24 @@ module Mana
         tool
       end
 
-      # Call the handler with LLM-provided input
+      # Call the handler with LLM-provided input.
+      # Maps input hash keys to the handler block's keyword parameters.
       def call(input)
         kwargs = {}
         @params.each do |param|
           key = param[:name]
           if input.key?(key)
+            # LLM provided a value for this parameter
             kwargs[key.to_sym] = input[key]
           elsif param[:default] != :__mana_no_default__
-            # Use block's default
+            # Optional parameter — let the block use its own default
           elsif param[:required]
             raise Mana::Error, "missing required parameter: #{key}"
           end
         end
 
         if kwargs.empty? && @params.empty?
+          # No-argument handler
           @handler.call
         else
           @handler.call(**kwargs)
@@ -71,19 +76,22 @@ module Mana
 
       private
 
+      # Extract parameter metadata from the handler block's signature.
+      # Used to build the JSON schema for the LLM tool definition.
       def extract_params(block)
         return [] unless block
 
         block.parameters.map do |(type, name)|
           case type
           when :keyreq
+            # Required keyword parameter (e.g. `sql:`)
             { name: name.to_s, required: true, default: :__mana_no_default__ }
           when :key
-            # Try to get default value — not possible via reflection,
-            # so we mark it as optional with unknown default
+            # Optional keyword parameter (e.g. `limit: 10`)
+            # Default not recoverable via reflection, marked as optional
             { name: name.to_s, required: false, default: nil }
           when :keyrest
-            # **kwargs — skip, can't generate schema
+            # **kwargs — can't generate a fixed schema, skip
             nil
           else
             # Positional args — treat as required string params
@@ -92,6 +100,7 @@ module Mana
         end.compact
       end
 
+      # Infer JSON schema type from a Ruby default value
       def infer_type(default)
         case default
         when Integer then "integer"
@@ -107,10 +116,12 @@ module Mana
     RESERVED_EFFECTS = %w[read_var write_var read_attr write_attr call_func done remember].freeze
 
     class << self
+      # Lazy-initialized hash of name -> EffectDefinition
       def registry
         @registry ||= {}
       end
 
+      # Register a custom effect. Rejects names that conflict with built-in tools.
       def define(name, description: nil, &handler)
         name_s = name.to_s
         if RESERVED_EFFECTS.include?(name_s)
@@ -120,14 +131,17 @@ module Mana
         registry[name_s] = EffectDefinition.new(name, description: description, &handler)
       end
 
+      # Remove a custom effect by name
       def undefine(name)
         registry.delete(name.to_s)
       end
 
+      # Check if a custom effect is registered
       def defined?(name)
         registry.key?(name.to_s)
       end
 
+      # Look up a custom effect by name
       def get(name)
         registry[name.to_s]
       end
@@ -137,6 +151,7 @@ module Mana
         registry.values.map(&:to_tool)
       end
 
+      # Remove all registered custom effects
       def clear!
         @registry = {}
       end

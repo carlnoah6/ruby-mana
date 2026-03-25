@@ -366,14 +366,12 @@ RSpec.describe Mana::Engine do
 
   describe "#handle_mock" do
     it "matches and returns stubbed values" do
-      Mana.mock do |m|
-        m.prompt "test", value: 42
-
-        b = binding
-        engine = Mana::Engine.new(b)
-        engine.handle_mock("test prompt")
-        expect(b.local_variable_get(:value)).to eq(42)
+      b = binding
+      Mana.mock do
+        prompt "test", value: 42
+        Mana::Engine.new(b).handle_mock("test prompt")
       end
+      expect(b.local_variable_get(:value)).to eq(42)
     end
   end
 

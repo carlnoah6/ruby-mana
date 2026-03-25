@@ -18,8 +18,13 @@ module Mana
     #   - tool calls: Anthropic uses `tool_use`/`tool_result` content blocks,
     #     OpenAI uses `tool_calls` array and `role: "tool"` messages
     #   - response: Anthropic returns `content` blocks, OpenAI returns `choices`
-    class OpenAI < Base
-      # Send a chat completion request and return Anthropic-style content blocks.
+    class OpenAI
+      def initialize(config)
+        @config = config
+      end
+
+      # Send a chat completion request and return content blocks in Mana's
+      # internal format (Anthropic-style content blocks).
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
         uri = URI("#{@config.effective_base_url}/v1/chat/completions")
         body = {
@@ -44,25 +49,31 @@ module Mana
 
         parsed = JSON.parse(res.body, symbolize_names: true)
         normalize_response(parsed)
+      # Re-raise timeout errors with a clearer message
       rescue Net::OpenTimeout, Net::ReadTimeout => e
         raise LLMError, "Request timed out: #{e.message}"
       end
 
       private
 
-      # Convert Anthropic-style messages to OpenAI format
+      # Convert Anthropic-style messages to OpenAI format.
+      # System prompt becomes a system message; user/assistant messages are converted individually.
       def convert_messages(system, messages)
         result = [{ role: "system", content: system }]
 
         messages.each do |msg|
+          # Dispatch by message role
           case msg[:role]
+          # User messages may contain plain text or tool_result arrays
           when "user"
             converted = convert_user_message(msg)
+            # tool_result conversions return an array of role:"tool" messages
             if converted.is_a?(Array)
               result.concat(converted)
             else
               result << converted
             end
+          # Assistant messages may contain text and/or tool_use blocks
           when "assistant"
             result << convert_assistant_message(msg)
           end
@@ -71,15 +82,16 @@ module Mana
         result
       end
 
+      # Convert a single Anthropic user message to OpenAI format.
+      # Handles three content shapes: plain string, tool_result array, or text block array.
       def convert_user_message(msg)
         content = msg[:content]
 
-        # Plain text user message
+        # Plain text user message — pass through directly
         return { role: "user", content: content } if content.is_a?(String)
 
-        # Array of content blocks — may contain tool_result blocks
+        # Array of tool_result blocks — convert to OpenAI's role:"tool" messages
         if content.is_a?(Array) && content.all? { |b| b[:type] == "tool_result" || b["type"] == "tool_result" }
-          # Convert each tool_result to an OpenAI tool message
           return content.map do |block|
             {
               role: "tool",
@@ -89,34 +101,41 @@ module Mana
           end
         end
 
-        # Other array content (e.g. text blocks) — join as string
+        # Other array content (e.g. text blocks) — join as a single string
         if content.is_a?(Array)
           texts = content.map { |b| b[:text] || b["text"] }.compact
           return { role: "user", content: texts.join("\n") }
         end
 
+        # Fallback: coerce to string
         { role: "user", content: content.to_s }
       end
 
+      # Convert a single Anthropic assistant message to OpenAI format.
+      # Separates text blocks and tool_use blocks into OpenAI's content + tool_calls fields.
       def convert_assistant_message(msg)
         content = msg[:content]
 
-        # Simple text response
+        # Simple text response — pass through directly
         if content.is_a?(String)
           return { role: "assistant", content: content }
         end
 
-        # Array of content blocks — may contain tool_use
+        # Array of content blocks — split into text parts and tool calls
         if content.is_a?(Array)
           text_parts = []
           tool_calls = []
 
           content.each do |block|
             type = block[:type] || block["type"]
+            # Separate text and tool_use content blocks
             case type
+            # Collect text content
             when "text"
               text_parts << (block[:text] || block["text"])
+            # Convert tool_use to OpenAI function call format
             when "tool_use"
+              # Convert Anthropic tool_use to OpenAI function call format
               tool_calls << {
                 id: block[:id] || block["id"],
                 type: "function",
@@ -134,6 +153,7 @@ module Mana
           return msg_hash
         end
 
+        # Fallback: coerce to string
         { role: "assistant", content: content.to_s }
       end
 
@@ -151,19 +171,20 @@ module Mana
         end
       end
 
-      # Convert OpenAI response back to Anthropic-style content blocks
+      # Convert OpenAI response back to Anthropic-style content blocks.
+      # This is the reverse of convert_messages — normalizes into Mana's canonical format.
       def normalize_response(parsed)
         choice = parsed.dig(:choices, 0, :message)
         return [] unless choice
 
         blocks = []
 
-        # Text content
+        # Extract text content (if any)
         if choice[:content] && !choice[:content].empty?
           blocks << { type: "text", text: choice[:content] }
         end
 
-        # Tool calls
+        # Convert OpenAI function calls back to Anthropic-style tool_use blocks
         if choice[:tool_calls]
           choice[:tool_calls].each do |tc|
             func = tc[:function]

@@ -18,6 +18,8 @@ module Mana
 
     DEFAULT = 128_000
 
+    # Return the context window size for a given model name.
+    # Matches against known patterns; falls back to DEFAULT for unknown models.
     def self.detect(model_name)
       return DEFAULT unless model_name
 

@@ -36,13 +36,14 @@ module Mana
         registry[key]
       end
 
-      # Compile a method: wrap it so first invocation triggers LLM code generation
+      # Compile a method: wrap it so first invocation triggers LLM code generation.
+      # On subsequent calls, the generated Ruby code is loaded from cache (zero API cost).
       def compile(owner, method_name)
         original = owner.instance_method(method_name)
         compiler = self
         key = registry_key(method_name, owner)
 
-        # Read the prompt from the original method body
+        # Read the prompt from the original method body (the ~"..." string)
         prompt = extract_prompt(original)
 
         # Build parameter signature for the generated method
@@ -53,10 +54,11 @@ module Mana
         prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16]
         cache_path = cache_file_path(method_name, owner, source_file: source_file)
 
-        # Load from cache if file exists and prompt hash matches
+        # Load from cache if file exists and prompt hash matches (fast path)
         if File.exist?(cache_path)
           first_line = File.open(cache_path, &:readline) rescue ""
           if first_line.include?(prompt_hash)
+            # Cache is valid — load the generated code and define the method immediately
             cached = File.read(cache_path)
             generated = cached.lines.reject { |l| l.start_with?("#") }.join.strip
             compiler.registry[key] = generated
@@ -65,9 +67,10 @@ module Mana
             $VERBOSE = v
             return
           end
-          # Prompt changed — cache is stale, will regenerate
+          # Prompt changed — cache is stale, will regenerate on first call
         end
 
+        # Replace the method with a lazy wrapper that generates code on first call
         old_verbose, $VERBOSE = $VERBOSE, nil
         p_hash = prompt_hash  # capture for closure
         src_file = source_file  # capture for closure
@@ -75,10 +78,10 @@ module Mana
           # Generate implementation via LLM
           generated = compiler.generate(method_name, params_desc, prompt)
 
-          # Write to cache file
+          # Write to cache file for future runs
           cache_path = compiler.write_cache(method_name, generated, owner, prompt_hash: p_hash, source_file: src_file)
 
-          # Store in registry
+          # Store in registry so Mana.source() can retrieve it
           compiler.registry[key] = generated
 
           # Define the method on the correct owner (not Object) via class_eval
@@ -87,7 +90,7 @@ module Mana
           target_owner.class_eval(generated, cache_path, 1)
           $VERBOSE = v
 
-          # Call the now-native method
+          # Call the now-native method (this wrapper never runs again)
           send(method_name, *args, **kwargs, &blk)
         end
         $VERBOSE = old_verbose
@@ -103,7 +106,7 @@ module Mana
         # Create isolated binding with only `code` variable visible.
         # Use eval to avoid "assigned but unused variable" parse-time warning.
         isolated = Object.new.instance_eval { eval("code = nil; binding") }
-        Mana::Engines::LLM.new(isolated).execute(engine_prompt)
+        Mana::Engine.new(isolated).execute(engine_prompt)
 
         code = isolated.local_variable_get(:code)
         # LLM may return literal \n instead of real newlines — unescape them
@@ -113,13 +116,16 @@ module Mana
 
       # Path to the cache file for a method.
       # Includes source file path for uniqueness: lib_foo_calculate.rb
+      # Build the cache file path for a method.
+      # Prefers source-file-based naming for uniqueness; falls back to owner class name.
       def cache_file_path(method_name, owner = nil, source_file: nil)
         parts = []
         if source_file
-          # Convert path relative to pwd: lib/foo.rb → lib_foo
+          # Convert path relative to pwd: lib/foo.rb -> lib_foo
           rel = source_file.sub("#{Dir.pwd}/", "").sub(/\.rb$/, "")
           parts << rel.tr("/", "_")
         elsif owner && owner != Object
+          # Use underscored class name when source file is unavailable
           parts << underscore(owner.name)
         end
         parts << method_name.to_s
@@ -153,6 +159,8 @@ module Mana
 
       # Extract the prompt string from the original method.
       # The method body should be a single ~"..." expression.
+      # Extract the prompt string from the original method's source code.
+      # Parses the method body to find the ~"..." expression.
       def extract_prompt(unbound_method)
         source_loc = unbound_method.source_location
         return nil unless source_loc
@@ -161,7 +169,7 @@ module Mana
         return nil unless file && File.exist?(file)
 
         lines = File.readlines(file)
-        # Scan from the def line to find the prompt string
+        # Walk from the def line, tracking block depth to find the matching `end`
         body_lines = []
         depth = 0
         (line - 1...lines.length).each do |i|
@@ -172,22 +180,25 @@ module Mana
           break if depth <= 0
         end
 
-        # Extract string content from ~"..." pattern
+        # Extract the prompt string from ~"..." or ~'...' pattern
         body = body_lines.join
         match = body.match(/~"([^"]*)"/) || body.match(/~'([^']*)'/)
+        # Fall back to the raw method body (excluding def/end lines) if no pattern found
         match ? match[1] : body_lines[1...-1].join.strip
       end
 
+      # Build a human-readable parameter signature string from method parameters.
+      # Maps each parameter type to its Ruby syntax representation.
       def describe_params(unbound_method)
         unbound_method.parameters.map do |(type, name)|
           case type
-          when :req then name.to_s
-          when :opt then "#{name}=nil"
-          when :rest then "*#{name}"
-          when :keyreq then "#{name}:"
-          when :key then "#{name}: nil"
-          when :keyrest then "**#{name}"
-          when :block then "&#{name}"
+          when :req then name.to_s            # required positional
+          when :opt then "#{name}=nil"         # optional positional
+          when :rest then "*#{name}"           # splat
+          when :keyreq then "#{name}:"         # required keyword
+          when :key then "#{name}: nil"        # optional keyword
+          when :keyrest then "**#{name}"       # double splat
+          when :block then "&#{name}"          # block parameter
           else name.to_s
           end
         end.join(", ")

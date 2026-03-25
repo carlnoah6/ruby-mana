@@ -46,6 +46,7 @@ module Mana
 
       private
 
+      # Breadth-first walk over the AST, yielding each node to the block
       def walk(node, &block)
         queue = [node]
         while (current = queue.shift)
@@ -56,29 +57,31 @@ module Mana
         end
       end
 
+      # Extract all parameter signatures from a DefNode's parameter list.
+      # Handles required, optional, rest, keyword, keyword rest, and block params.
       def extract_params(def_node)
         params_node = def_node.parameters
         return [] unless params_node
 
         result = []
 
-        # Required parameters
+        # Required positional parameters
         (params_node.requireds || []).each do |p|
           result << param_name(p)
         end
 
-        # Optional parameters
+        # Optional positional parameters (with default values)
         (params_node.optionals || []).each do |p|
           result << "#{param_name(p)}=..."
         end
 
-        # Rest parameter
+        # Splat rest parameter (*args)
         if params_node.rest && !params_node.rest.is_a?(Prism::ImplicitRestNode)
           name = params_node.rest.name
           result << "*#{name || ''}"
         end
 
-        # Keyword parameters
+        # Keyword parameters (required and optional)
         (params_node.keywords || []).each do |p|
           case p
           when Prism::RequiredKeywordParameterNode
@@ -88,13 +91,13 @@ module Mana
           end
         end
 
-        # Keyword rest
+        # Double splat keyword rest parameter (**opts)
         if params_node.keyword_rest.is_a?(Prism::KeywordRestParameterNode)
           name = params_node.keyword_rest.name
           result << "**#{name || ''}"
         end
 
-        # Block parameter
+        # Block parameter (&block)
         if params_node.block
           result << "&#{params_node.block.name || ''}"
         end
@@ -102,6 +105,7 @@ module Mana
         result
       end
 
+      # Extract the name string from a parameter AST node
       def param_name(node)
         case node
         when Prism::RequiredParameterNode
@@ -109,6 +113,7 @@ module Mana
         when Prism::OptionalParameterNode
           node.name.to_s
         else
+          # Fallback for other node types (e.g. destructured params)
           node.respond_to?(:name) ? node.name.to_s : "_"
         end
       end

@@ -11,7 +11,11 @@ module Mana
     # Sends requests directly to the Anthropic Messages API (/v1/messages).
     # No format conversion needed — Mana's internal format matches Anthropic's.
     # Authentication uses x-api-key header (not Bearer token).
-    class Anthropic < Base
+    class Anthropic
+      def initialize(config)
+        @config = config
+      end
+
       # Send a chat request and return content blocks directly from the API.
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
         uri = URI("#{@config.effective_base_url}/v1/messages")
@@ -39,6 +43,7 @@ module Mana
 
         parsed = JSON.parse(res.body, symbolize_names: true)
         parsed[:content] || []
+      # Re-raise timeout errors with a clearer message
       rescue Net::OpenTimeout, Net::ReadTimeout => e
         raise LLMError, "Request timed out: #{e.message}"
       end

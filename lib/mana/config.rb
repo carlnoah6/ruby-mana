@@ -46,6 +46,7 @@ module Mana
       @on_compact = nil
     end
 
+    # Set timeout; must be a positive number
     def timeout=(value)
       unless value.is_a?(Numeric) && value.positive?
         raise ArgumentError, "timeout must be a positive number, got #{value.inspect}"
@@ -58,8 +59,10 @@ module Mana
     def security=(value)
       case value
       when SecurityPolicy
+        # Use the provided policy instance directly
         @security_policy = value
       when Symbol, Integer
+        # Create a new policy from preset name or numeric level
         @security_policy = SecurityPolicy.new(value)
       else
         raise ArgumentError, "security must be a Symbol, Integer, or SecurityPolicy, got #{value.class}"
@@ -69,8 +72,10 @@ module Mana
     # Resolve the effective base URL based on the configured or auto-detected backend.
     # Falls back to the appropriate default when no explicit URL is set.
     def effective_base_url
+      # Return user-configured URL if explicitly set
       return @base_url if @base_url
 
+      # Otherwise pick the default URL based on backend type
       if anthropic_backend?
         DEFAULT_ANTHROPIC_URL
       else
@@ -80,10 +85,12 @@ module Mana
 
     private
 
+    # Determine whether the current backend is Anthropic
     def anthropic_backend?
       case @backend&.to_s
       when "anthropic" then true
       when "openai" then false
+      # No explicit backend; auto-detect from model name pattern
       else @model.match?(Backends::ANTHROPIC_PATTERNS)
       end
     end
