@@ -290,6 +290,88 @@ RSpec.describe Mana::Memory do
     end
   end
 
+  describe "#needs_compaction?" do
+    it "returns true when over threshold" do
+      memory = described_class.new
+      # Add lots of content to push token count high
+      20.times do |i|
+        memory.short_term << { role: "user", content: "A" * 1000 }
+        memory.short_term << { role: "assistant", content: [{ type: "text", text: "B" * 1000 }] }
+      end
+      # Very low threshold to guarantee trigger
+      Mana.config.memory_pressure = 0.0001
+      expect(memory.needs_compaction?).to be true
+    end
+  end
+
+  describe "#schedule_compaction" do
+    it "runs compaction in a background thread" do
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: JSON.generate({ content: [{ type: "text", text: "Background summary" }] })
+        )
+
+      memory = described_class.new
+      10.times do |i|
+        memory.short_term << { role: "user", content: "Message #{i} " + ("x" * 200) }
+        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
+      end
+
+      Mana.config.memory_pressure = 0.0001
+      Mana.config.memory_keep_recent = 2
+
+      memory.schedule_compaction
+      memory.wait_for_compaction
+
+      expect(memory.summaries).not_to be_empty
+    end
+  end
+
+  describe "on_compact callback" do
+    it "calls on_compact with the summary" do
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: JSON.generate({ content: [{ type: "text", text: "Callback summary" }] })
+        )
+
+      callback_result = nil
+      Mana.config.on_compact = ->(summary) { callback_result = summary }
+
+      memory = described_class.new
+      10.times do |i|
+        memory.short_term << { role: "user", content: "Message #{i} " + ("x" * 200) }
+        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
+      end
+
+      Mana.config.memory_pressure = 0.0001
+      Mana.config.memory_keep_recent = 2
+      memory.compact!
+
+      expect(callback_result).to eq("Callback summary")
+      Mana.config.on_compact = nil
+    end
+  end
+
+  describe "compaction edge cases" do
+    it "skips compaction when only tool_result messages exist (no user rounds)" do
+      memory = described_class.new
+      5.times do
+        memory.short_term << { role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: "ok" }] }
+        memory.short_term << { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "done", input: {} }] }
+      end
+
+      Mana.config.memory_pressure = 0.0001
+      Mana.config.memory_keep_recent = 1
+      # tool_result messages have Array content, not String — they don't count as user rounds
+      memory.compact!
+      expect(memory.summaries).to be_empty
+    end
+  end
+
   describe "#inspect" do
     it "returns human-readable representation" do
       memory = described_class.new
