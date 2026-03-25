@@ -159,4 +159,46 @@ RSpec.describe Mana::SecurityPolicy do
       expect(Mana.config.security_policy.receiver_call_blocked?("File", "read")).to be false
     end
   end
+
+  describe "allow + block interaction on same receiver" do
+    it "allow_receiver overrides block_receiver for specific methods" do
+      policy = described_class.new(:strict)
+      # File is fully blocked in :strict
+      expect(policy.receiver_call_blocked?("File", "read")).to be true
+      # Allow only read
+      policy.allow_receiver "File", only: %w[read]
+      expect(policy.receiver_call_blocked?("File", "read")).to be false
+      expect(policy.receiver_call_blocked?("File", "delete")).to be true
+    end
+
+    it "block_receiver after allow_receiver re-blocks the receiver" do
+      policy = described_class.new(:permissive)
+      # File is not blocked in :permissive
+      expect(policy.receiver_call_blocked?("File", "read")).to be false
+      # Block it
+      policy.block_receiver "File"
+      expect(policy.receiver_call_blocked?("File", "read")).to be true
+      # Allow override no longer applies after full block
+      expect(policy.receiver_call_blocked?("File", "delete")).to be true
+    end
+
+    it "partial block then partial allow on same receiver" do
+      policy = described_class.new(:permissive)
+      policy.block_receiver "File", only: %w[delete write]
+      policy.allow_receiver "File", only: %w[write]
+      # delete is blocked, write is allowed via override
+      expect(policy.receiver_call_blocked?("File", "delete")).to be true
+      expect(policy.receiver_call_blocked?("File", "write")).to be false
+      expect(policy.receiver_call_blocked?("File", "read")).to be false
+    end
+  end
+
+  describe "sandbox mode with overrides" do
+    it "allows explicitly allowlisted receiver in sandbox" do
+      policy = described_class.new(:sandbox)
+      policy.allow_receiver "Time", only: %w[now]
+      expect(policy.receiver_call_blocked?("Time", "now")).to be false
+      expect(policy.receiver_call_blocked?("Time", "parse")).to be true
+    end
+  end
 end

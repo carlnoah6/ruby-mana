@@ -122,6 +122,7 @@ module Mana
       Thread.current[:mana_depth] ||= 0
       Thread.current[:mana_depth] += 1
       nested = Thread.current[:mana_depth] > 1
+      outer_memory = nil  # defined here so ensure block always has access
 
       # Nested calls get fresh short-term memory but share long-term
       if nested && !@incognito
@@ -454,7 +455,11 @@ module Mana
           end
 
           # Resolve the receiver constant and call the first method with args
-          receiver = @binding.eval(receiver_name) rescue raise(NameError, "unknown constant '#{receiver_name}'")
+          begin
+            receiver = @binding.eval(receiver_name)
+          rescue => e
+            raise NameError, "cannot resolve '#{receiver_name}': #{e.message}"
+          end
           result = receiver.public_send(first_method.to_sym, *args)
 
           # Chain remaining methods without args (e.g. .to_s, .strftime)

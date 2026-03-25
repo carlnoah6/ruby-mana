@@ -211,7 +211,9 @@ module Mana
       return if user_indices.size <= keep_recent
 
       # Find the cutoff point: everything before the last N rounds gets summarized
-      cutoff_user_idx = user_indices[-(keep_recent)]
+      # Clamp keep_recent to avoid negative index beyond array bounds
+      keep = [keep_recent, user_indices.size].min
+      cutoff_user_idx = user_indices[-keep]
       old_messages = @short_term[0...cutoff_user_idx]
       return if old_messages.empty?
 

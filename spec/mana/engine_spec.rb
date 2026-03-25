@@ -440,4 +440,140 @@ RSpec.describe Mana::Engine do
       end
     end
   end
+
+  describe "security policy enforcement in call_func" do
+    it "returns error message to LLM when method is blocked" do
+      Mana.config.security = :strict
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "eval" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      # Should not crash — error goes back to LLM as tool_result
+      result = Mana::Engine.run("try eval", b)
+      expect(result).to eq("ok")
+    end
+
+    it "returns error for blocked receiver call" do
+      Mana.config.security = :strict
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "File.read", "args" => ["/etc/passwd"] } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "blocked" } }]
+      )
+
+      b = binding
+      result = Mana::Engine.run("read file", b)
+      expect(result).to eq("blocked")
+    end
+
+    it "returns error for unknown constant in chained call" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "NonExistent.foo" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      expect { Mana::Engine.run("call nonexistent", b) }.not_to raise_error
+    end
+  end
+
+  describe "multiple write_var return value" do
+    it "returns Hash when multiple variables are written" do
+      stub_anthropic_sequence(
+        [
+          { type: "tool_use", id: "t1", name: "write_var", input: { "name" => "aa", "value" => 1 } },
+          { type: "tool_use", id: "t2", name: "write_var", input: { "name" => "bb", "value" => 2 } }
+        ],
+        [{ type: "tool_use", id: "t3", name: "done", input: {} }]
+      )
+
+      b = binding
+      result = Mana::Engine.run("set aa=1 bb=2", b)
+      expect(result).to be_a(Hash)
+      expect(result[:aa]).to eq(1)
+      expect(result[:bb]).to eq(2)
+    end
+
+    it "returns single value when one variable is written" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "x", "value" => 42 } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      result = Mana::Engine.run("set x=42", b)
+      expect(result).to eq(42)
+    end
+  end
+
+  describe "nil and edge case values in write_var" do
+    it "handles writing nil" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "x", "value" => nil } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      Mana::Engine.run("set x to nil", b)
+      expect(b.local_variable_get(:x)).to be_nil
+    end
+
+    it "handles writing empty array" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "x", "value" => [] } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      Mana::Engine.run("set x to empty", b)
+      expect(b.local_variable_get(:x)).to eq([])
+    end
+
+    it "handles writing empty string" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "x", "value" => "" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
+      )
+
+      b = binding
+      Mana::Engine.run("set x to empty string", b)
+      expect(b.local_variable_get(:x)).to eq("")
+    end
+  end
+
+  describe "injection validation" do
+    it "returns error message for invalid variable name" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_var", input: { "name" => "system('rm -rf /')", "value" => 1 } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      Mana::Engine.run("try injection", b)
+      # Verify the malicious variable was NOT created
+      expect(b.local_variables).not_to include(:"system('rm -rf /')")
+    end
+  end
+
+  describe "unpaired tool_use cleanup" do
+    it "strips trailing unpaired tool_use from short-term memory" do
+      # Simulate a broken conversation state in memory
+      memory = Mana.memory
+      memory.short_term << { role: "user", content: "test" }
+      memory.short_term << {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "t1", name: "read_var", input: { "name" => "x" } }]
+      }
+      # No tool_result follows — this would cause API 400
+
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      # Should not raise HTTP 400 — unpaired tool_use should be stripped
+      expect { Mana::Engine.run("test", b) }.not_to raise_error
+    end
+  end
 end

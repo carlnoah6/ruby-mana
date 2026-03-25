@@ -335,4 +335,22 @@ RSpec.describe Mana::Memory do
       expect(memory.long_term.first[:content]).to eq("user prefers dark mode")
     end
   end
+
+  describe "compaction resilience" do
+    it "returns 'Summary unavailable' when backend fails during compaction" do
+      memory = described_class.new
+      # Stub the backend to raise an error
+      allow(Mana::Backends).to receive(:for).and_raise(Mana::LLMError, "timeout")
+
+      result = memory.send(:summarize, "some conversation text")
+      expect(result).to eq("Summary unavailable")
+    end
+
+    it "forget with nonexistent id does not raise" do
+      memory = described_class.new
+      memory.remember("a fact")
+      expect { memory.forget(id: 999) }.not_to raise_error
+      expect(memory.long_term.size).to eq(1)
+    end
+  end
 end
