@@ -289,6 +289,60 @@ RSpec.describe Mana::Engine do
     end
   end
 
+  describe "call_func with local lambda" do
+    it "calls a lambda defined in the binding" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "doubler", "args" => [5] } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      doubler = ->(x) { x * 2 } # rubocop:disable Lint/UselessAssignment
+      b = binding
+      engine = described_class.new(b)
+      result = engine.execute("call doubler(5)")
+      expect(result).to eq("ok")
+    end
+  end
+
+  describe "#extract_tool_uses" do
+    let(:engine) { described_class.new(binding) }
+
+    it "extracts tool_use blocks from mixed content" do
+      content = [
+        { type: "text", text: "thinking..." },
+        { type: "tool_use", id: "t1", name: "read_var", input: { "name" => "x" } },
+        { type: "text", text: "more thinking" },
+        { type: "tool_use", id: "t2", name: "done", input: {} }
+      ]
+      result = engine.send(:extract_tool_uses, content)
+      expect(result.size).to eq(2)
+      expect(result.map { |t| t[:name] }).to eq(%w[read_var done])
+    end
+
+    it "handles string keys" do
+      content = [
+        { "type" => "tool_use", "id" => "t1", "name" => "write_var", "input" => { "name" => "x", "value" => 1 } }
+      ]
+      result = engine.send(:extract_tool_uses, content)
+      expect(result.size).to eq(1)
+      expect(result.first[:name]).to eq("write_var")
+    end
+
+    it "returns [] for non-array input" do
+      expect(engine.send(:extract_tool_uses, nil)).to eq([])
+      expect(engine.send(:extract_tool_uses, "not an array")).to eq([])
+      expect(engine.send(:extract_tool_uses, 42)).to eq([])
+    end
+  end
+
+  describe "#resolve" do
+    it "raises NameError for undefined variable" do
+      b = binding
+      engine = described_class.new(b)
+      expect { engine.send(:resolve, "undefined_var_xyz") }.to raise_error(NameError)
+    end
+  end
+
   describe "call_func with dotted methods" do
     it "allows Class.method calls like Time.now" do
       stub_anthropic_sequence(

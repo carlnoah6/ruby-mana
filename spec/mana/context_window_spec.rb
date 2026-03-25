@@ -20,6 +20,10 @@ RSpec.describe Mana::ContextWindow do
       expect(described_class.detect("claude-3-opus-20240229")).to eq(200_000)
     end
 
+    it "returns 200_000 for claude-opus-4" do
+      expect(described_class.detect("claude-opus-4-20250514")).to eq(200_000)
+    end
+
     it "returns 128_000 for GPT-4o" do
       expect(described_class.detect("gpt-4o")).to eq(128_000)
     end

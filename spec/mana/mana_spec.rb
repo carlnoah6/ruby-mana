@@ -93,6 +93,20 @@ RSpec.describe Mana do
     end
   end
 
+  describe ".source" do
+    it "delegates to Compiler.source" do
+      expect(Mana::Compiler).to receive(:source).with(:foo, owner: nil).and_return("def foo; end")
+      expect(Mana.source(:foo)).to eq("def foo; end")
+    end
+  end
+
+  describe ".cache_dir=" do
+    it "delegates to Compiler.cache_dir=" do
+      expect(Mana::Compiler).to receive(:cache_dir=).with("/tmp/custom_cache")
+      Mana.cache_dir = "/tmp/custom_cache"
+    end
+  end
+
   describe "error classes" do
     it "defines Error as StandardError subclass" do
       expect(Mana::Error.ancestors).to include(StandardError)

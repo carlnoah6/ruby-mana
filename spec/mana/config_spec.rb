@@ -108,6 +108,51 @@ RSpec.describe Mana::Config do
     end
   end
 
+  describe "environment variable overrides" do
+    around do |example|
+      saved = %w[MANA_VERBOSE MANA_BACKEND MANA_MODEL MANA_TIMEOUT MANA_SECURITY].map { |k| [k, ENV[k]] }
+      example.run
+    ensure
+      saved.each { |k, v| v ? ENV[k] = v : ENV.delete(k) }
+    end
+
+    it "MANA_VERBOSE sets verbose to true" do
+      ENV["MANA_VERBOSE"] = "true"
+      c = described_class.new
+      expect(c.verbose).to be true
+    end
+
+    it "MANA_BACKEND sets backend to symbol" do
+      ENV["MANA_BACKEND"] = "openai"
+      c = described_class.new
+      expect(c.backend).to eq(:openai)
+    end
+
+    it "MANA_MODEL overrides default model" do
+      ENV["MANA_MODEL"] = "gpt-4o"
+      c = described_class.new
+      expect(c.model).to eq("gpt-4o")
+    end
+
+    it "MANA_TIMEOUT overrides default timeout" do
+      ENV["MANA_TIMEOUT"] = "30"
+      c = described_class.new
+      expect(c.timeout).to eq(30)
+    end
+
+    it "MANA_SECURITY sets security_policy preset" do
+      ENV["MANA_SECURITY"] = "strict"
+      c = described_class.new
+      expect(c.security_policy.preset).to eq(:strict)
+    end
+  end
+
+  describe "security=" do
+    it "raises ArgumentError with invalid type" do
+      expect { config.security = "not_valid" }.to raise_error(ArgumentError, /security must be/)
+    end
+  end
+
   describe "accessors" do
     it "allows setting all attributes" do
       config.model = "test-model"

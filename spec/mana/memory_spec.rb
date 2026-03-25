@@ -246,6 +246,13 @@ RSpec.describe Mana::Memory do
       memory = described_class.new
       expect(memory.token_count).to eq(0)
     end
+
+    it "includes summaries in count" do
+      memory = described_class.new
+      memory.summaries << "This is a summary of a previous conversation"
+      count_with_summary = memory.token_count
+      expect(count_with_summary).to be > 0
+    end
   end
 
   describe "#needs_compaction?" do

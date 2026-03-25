@@ -19,6 +19,12 @@ RSpec.describe Mana::Backends do
       expect { described_class.for(config) }.to raise_error(Mana::ConfigError, /API key is not configured/)
     end
 
+    it "raises ConfigError when API key is whitespace-only" do
+      config = Mana::Config.new
+      config.api_key = "   "
+      expect { described_class.for(config) }.to raise_error(Mana::ConfigError, /API key is not configured/)
+    end
+
     it "returns Anthropic backend for claude-* models" do
       config = config_with(model: "claude-sonnet-4-20250514")
       config.model = "claude-sonnet-4-20250514"
