@@ -105,7 +105,7 @@
     <div class="lk">
       <a href="#features">Features</a>
       <a href="#examples">Examples</a>
-      <a href="#polyglot">Polyglot</a>
+      <a href="#security">Security</a>
       <a href="#how">How it works</a>
       <a href="https://github.com/twokidsCarl/ruby-mana">GitHub</a>
       <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a>
@@ -121,11 +121,10 @@
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
   <div class="badges">
-    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.1</span>
-    <span class="badge">Ruby 3.3+</span>
+    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.5</span>
+    <span class="badge">Ruby 3.3+ / 4.0</span>
     <span class="badge">Multi-LLM</span>
-    <span class="badge">Polyglot</span>
-    <span class="badge">4 Engines</span>
+    <span class="badge">Security Levels</span>
     <span class="badge">MIT License</span>
   </div>
 
@@ -197,11 +196,12 @@ Mana.configure <span class="kw">do</span> |c|
 <span class="cmt"># or use env vars: ANTHROPIC_API_URL / OPENAI_API_URL</span></pre>
     </div>
     <div class="slide">
-<pre><span class="cmt"># One operator, any language — auto-detected</span>
-data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
-<span class="ms">~"const evens = data.filter(n => n % 2 === 0)"</span>  <span class="cmt"># JS</span>
-<span class="ms">~"mean = statistics.mean(data)"</span>                 <span class="cmt"># Python</span>
-<span class="ms">~"analyze &lt;data&gt;, store in &lt;result&gt;"</span>            <span class="cmt"># LLM</span></pre>
+<pre><span class="cmt"># Security levels — fine-grained control</span>
+Mana.configure <span class="kw">do</span> |c|
+  c.security = <span class="str">:standard</span>  <span class="cmt"># level 2: + read filesystem</span>
+  c.security_policy.allow_receiver <span class="str">"File"</span>, only: [<span class="str">"read"</span>]
+<span class="kw">end</span>
+<span class="cmt"># 0 :sandbox → 1 :strict → 2 :standard → 3 :permissive → 4 :danger</span></pre>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
@@ -281,8 +281,8 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
       <p>Anthropic and OpenAI-compatible APIs out of the box. Works with Ollama, DeepSeek, Groq, and more. Auto-detects backend from model name.</p>
     </div>
     <div class="card">
-      <h3>🌐 Polyglot — 4 engines</h3>
-      <p>Same <code>~"..."</code> runs JavaScript (V8), Python, Ruby eval, or LLM. Auto-detected from syntax. Bidirectional calling, RemoteRef proxies, and automatic GC across all engines.</p>
+      <h3>🔒 Security levels</h3>
+      <p>5 levels from <code>:sandbox</code> (0) to <code>:danger</code> (4). Fine-grained control over what the LLM can call. Default <code>:standard</code> allows read-only filesystem.</p>
     </div>
   </div>
 </section>
@@ -411,123 +411,44 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   </div>
 </section>
 
-<!-- Polyglot -->
-<section id="polyglot">
-  <h2>One operator, four engines</h2>
-  <p class="lead"><code>~"..."</code> auto-detects JavaScript, Python, Ruby, or natural language and routes to the right engine. Variables bridge automatically.</p>
+<!-- Security -->
+<section id="security">
+  <h2>Security policy</h2>
+  <p class="lead">5 levels control what the LLM can call. Higher number = more permissions.</p>
 
-  <div class="grid grid-3" style="margin-bottom:24px">
+  <div class="grid" style="margin-bottom:24px">
     <div class="card">
-      <h3>🟨 JavaScript (V8)</h3>
-<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
-
-<span class="ms">~"const evens = data.filter(
-    n => n % 2 === 0
-  )"</span>
-puts evens
-<span class="cmt"># => [2, 4]</span></pre>
+      <h3>Level 0 — <code>:sandbox</code></h3>
+      <p>Variables and user-defined functions only. Everything else blocked.</p>
     </div>
     <div class="card">
-      <h3>🐍 Python</h3>
-<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
-
-<span class="ms">~"evens = [n for n in data
-    if n % 2 == 0]"</span>
-puts evens
-<span class="cmt"># => [2, 4]</span></pre>
+      <h3>Level 1 — <code>:strict</code></h3>
+      <p>+ safe stdlib: <code>Time.now</code>, <code>Date.today</code>, <code>Math.*</code></p>
+    </div>
+    <div class="card" style="border-color:var(--ac)">
+      <h3>Level 2 — <code>:standard</code> (default)</h3>
+      <p>+ read filesystem: <code>File.read</code>, <code>Dir.glob</code>. Write/delete still blocked.</p>
     </div>
     <div class="card">
-      <h3>🤖 Natural Language</h3>
-<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem">data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
-
-<span class="ms">~"find even numbers in
-  &lt;data&gt;, store in &lt;evens&gt;"</span>
-puts evens
-<span class="cmt"># => [2, 4]</span></pre>
+      <h3>Level 3 — <code>:permissive</code></h3>
+      <p>+ write files, network, require. Only eval/exec/fork blocked.</p>
     </div>
   </div>
 
-  <p style="color:var(--dim);font-size:.88rem;margin-bottom:32px">Detection uses token patterns from <code>data/lang-rules.yml</code>. Override with <code>Mana.engine = :javascript</code> or <code>Mana.with(:python) { ... }</code>. The fourth engine is <code>:ruby</code> — <code>eval</code> in a sandboxed namespace.</p>
+<pre>Mana.configure <span class="kw">do</span> |c|
+  c.security = <span class="str">:standard</span>            <span class="cmt"># or c.security = 2</span>
 
-  <h3 style="font-size:1.3rem;margin-bottom:16px">🔄 Bidirectional calling <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
-  <p class="lead">Foreign engines can call Ruby methods, and Ruby can call into them. Not just variable bridging — full function interop.</p>
-  <div class="grid">
-    <div class="card">
-      <h3>JS → Ruby</h3>
-<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem"><span class="kw">def</span> <span class="fn">square</span>(n) = n ** <span class="num">2</span>
-
-<span class="ms">~"const result = ruby.square(7)"</span>
-puts result  <span class="cmt"># => 49</span>
-
-<span class="cmt"># JS calls Ruby methods via the
-# injected `ruby` bridge object</span></pre>
-    </div>
-    <div class="card">
-      <h3>Python → Ruby</h3>
-<pre style="border:none;margin:0;background:none;padding:0;font-size:.82rem"><span class="kw">def</span> <span class="fn">greet</span>(name) = <span class="str">"Hello #{name}"</span>
-
-<span class="ms">~"msg = ruby.greet('world')"</span>
-puts msg  <span class="cmt"># => "Hello world"</span>
-
-<span class="cmt"># Python calls Ruby via the same
-# `ruby` bridge — read/write/call</span></pre>
-    </div>
-  </div>
-
-  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">🧬 RemoteRef — complex objects across engines <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
-  <p class="lead">Complex Ruby objects are passed as proxies, not serialized. Method calls route back through the bridge transparently.</p>
-<pre>user = User.new(<span class="str">"Alice"</span>, role: <span class="str">"admin"</span>)
-
-<span class="cmt"># JS receives a proxy — method calls route back to Ruby</span>
-<span class="ms">~"const name = user.name()"</span>       <span class="cmt"># => "Alice" (calls Ruby)</span>
-<span class="ms">~"const isAdmin = user.admin()"</span>   <span class="cmt"># => true   (calls Ruby)</span>
-
-<span class="cmt"># Python too</span>
-<span class="ms">~"role = user.role()"</span>             <span class="cmt"># => "admin" (calls Ruby)</span>
-
-<span class="cmt"># Objects are tracked in ObjectRegistry with integer IDs.
-# No serialization, no data loss — the real object stays in Ruby.</span></pre>
-
-  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">♻️ Automatic GC — no memory leaks <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.0</span></h3>
-  <p class="lead">When a RemoteRef is garbage collected on either side, the registry entry is released automatically.</p>
-  <div class="grid grid-3">
-    <div class="card">
-      <h3>Ruby side</h3>
-      <p><code>ObjectSpace.define_finalizer</code> on RemoteRef releases the ObjectRegistry entry when GC runs.</p>
-    </div>
-    <div class="card">
-      <h3>JS side</h3>
-      <p><code>FinalizationRegistry</code> on the Proxy calls <code>ruby.__ref_release()</code> when the JS proxy is collected.</p>
-    </div>
-    <div class="card">
-      <h3>Python side</h3>
-      <p><code>weakref.ref</code> callback releases the registry entry when the Python proxy is collected.</p>
-    </div>
-  </div>
-  <p style="color:var(--dim);font-size:.88rem;margin-top:16px">Plus <code>on_release</code> callbacks on ObjectRegistry for custom cleanup (close connections, flush buffers, etc.).</p>
-
-  <h3 style="font-size:1.3rem;margin-top:32px;margin-bottom:16px">🏷️ Engine capabilities <span style="font-size:.8rem;color:var(--gr);font-weight:400">v0.5.1</span></h3>
-  <p style="color:var(--dim);font-size:.88rem;margin-bottom:16px">Engines declare their type: <strong>execution engines</strong> (Ruby/JS/Python) vs <strong>reasoning engines</strong> (LLM). Capabilities are derived automatically.</p>
-<pre><span class="cmt"># Check engine type</span>
-Mana::Engines::JavaScript.<span class="kw">new</span>(binding).execution_engine?
-<span class="cmt"># => true (can execute code, hold state, be called bidirectionally)</span>
-
-Mana::Engines::LLM.<span class="kw">new</span>(binding).execution_engine?
-<span class="cmt"># => false (reasoning engine, no state/remote refs)</span>
-
-<span class="cmt"># Derived capabilities (backward compatible)</span>
-engine.supports_remote_ref?      <span class="cmt"># Can hold RemoteRef?</span>
-engine.supports_bidirectional?   <span class="cmt"># Can be called from other engines?</span>
-engine.supports_state?           <span class="cmt"># Maintains state across calls?</span>
-
-<span class="cmt"># All three return execution_engine? — no redundancy</span></pre>
-  <p style="color:var(--dim);font-size:.88rem;margin-top:12px"><strong>v0.5.1 refactor:</strong> Replaced three redundant flags with a single <code>execution_engine?</code> method. Clearer semantics, fully backward compatible.</p>
+  <span class="cmt"># Fine-grained overrides</span>
+  c.security_policy.allow_receiver <span class="str">"File"</span>, only: %w[read exist?]
+  c.security_policy.block_receiver <span class="str">"Net::HTTP"</span>
+  c.security_policy.block_method <span class="str">"puts"</span>
+<span class="kw">end</span></pre>
 </section>
 
 <!-- How it works -->
 <section id="how">
   <h2>How it works</h2>
-  <p class="lead">Mana uses Ruby's unary <code>~</code> operator to bridge natural language, JavaScript, Python, and Ruby code.</p>
+  <p class="lead">Mana uses Ruby's unary <code>~</code> operator to turn natural language into executable operations.</p>
   <div class="steps">
     <div class="step">
       <div class="sn">1</div>
@@ -535,19 +456,19 @@ engine.supports_state?           <span class="cmt"># Maintains state across call
     </div>
     <div class="step">
       <div class="sn">2</div>
-      <div class="st"><strong>Detect language</strong> — token patterns route to the right engine: JavaScript (V8), Python, Ruby eval, or LLM</div>
+      <div class="st"><strong>Build context</strong> — reads <code>&lt;var&gt;</code> references, loads memory, discovers available functions via Prism AST</div>
     </div>
     <div class="step">
       <div class="sn">3</div>
-      <div class="st"><strong>Bridge variables</strong> — simple types copy automatically; complex objects become RemoteRef proxies with method forwarding</div>
+      <div class="st"><strong>LLM call</strong> — prompt + context sent with tools: <code>read_var</code>, <code>write_var</code>, <code>call_func</code>, <code>remember</code>, <code>done</code> + custom effects</div>
     </div>
     <div class="step">
       <div class="sn">4</div>
-      <div class="st"><strong>Execute</strong> — JS/Python run natively; LLM gets tools (6 built-in effects + custom). Bidirectional: foreign code can call Ruby back</div>
+      <div class="st"><strong>Tool loop</strong> — LLM responds with tool calls → Mana executes them against the live Ruby binding → sends results back. Security policy controls what's allowed</div>
     </div>
     <div class="step">
       <div class="sn">5</div>
-      <div class="st"><strong>Cleanup</strong> — variables are set, objects modified. GC finalizers release RemoteRef entries automatically — no leaks</div>
+      <div class="st"><strong>Done</strong> — variables are set, objects modified. Memory compaction runs in background if context is getting large</div>
     </div>
   </div>
 </section>
@@ -557,8 +478,7 @@ engine.supports_state?           <span class="cmt"># Maintains state across call
   <h2>Install</h2>
   <div class="ib"><code><span class="d">$ </span>gem install ruby-mana</code></div>
   <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Or in your Gemfile: <code>gem "ruby-mana"</code></p>
-  <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Requires Ruby 3.3+ and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
-  <p style="color:var(--dim);font-size:.9rem">For polyglot: <code>gem "mini_racer"</code> (JavaScript) and <code>gem "pycall"</code> (Python) are optional.</p>
+  <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Requires Ruby 3.3+ (including 4.0) and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
 </section>
 
 <!-- Research -->
@@ -579,7 +499,7 @@ engine.supports_state?           <span class="cmt"># Maintains state across call
     <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a> ·
     MIT License
   </p>
-  <p style="margin-top:8px">Ruby 3.3+ · Built with algebraic effects</p>
+  <p style="margin-top:8px">Ruby 3.3+ / 4.0 · Built with algebraic effects</p>
 </footer>
 
 </div>
