@@ -700,7 +700,9 @@ module Mana
           lines = v.lines.size
           words = v.split.size
           first = v.lines.first&.strip&.slice(0, 30)
-          "#{k}: #{first}... (#{lines} lines, #{words} words)"
+          "#{k}: \"#{first}...\" (#{lines} lines, #{words} words)"
+        elsif v.is_a?(String) && v.length > 100
+          "#{k}: \"#{v[0, 50]}...\" (#{v.length} chars)"
         else
           "#{k}: #{v.inspect}"
         end
