@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.6] - 2026-03-26
+
+### Added
+- **Function comment extraction** — descriptions and @param types from YARD-style comments
+- **Keyword argument support** in call_func (kwargs field)
+- **Prism AST prompt extraction** — replaces regex, handles multi-line and escaped quotes
+- **Instruction sequence fallback** — extracts prompt from bytecode in IRB/eval
+- **Cache version locking** — includes gem version + Ruby version in cache hash
+- **Method visibility preservation** — mana def respects private/protected
+- **Smart log formatting** — code highlighting, auto-summarize long values
+
+### Removed
+- **effect_registry** — replaced by plain Ruby functions with comment extraction
+
+### Fixed
+- Config naming: unified `security` / `security=` (was `security_policy`)
+- Config validation: `validate!` method, timeout=0 blocked
+- Config decoupled from Backends module
+- Compiler: `:nokey` (**nil) parameter handled
+- Compiler: cache works in IRB with auto-invalidation
+
 ## [0.5.5] - 2026-03-23
 
 ### Added

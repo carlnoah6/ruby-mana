@@ -142,11 +142,12 @@ email.subject = <span class="str">"URGENT: Server down"</span>
 email.category  <span class="cmt"># =&gt; "infrastructure"</span></pre>
     </div>
     <div class="slide">
-<pre><span class="cmt"># Define tools the LLM can call</span>
-Mana.define_effect <span class="str">:query_db</span> <span class="kw">do</span> |sql:|
-  DB.execute(sql)
+<pre><span class="cmt"># Just define Ruby functions — LLM discovers them</span>
+<span class="cmt"># Query the database</span>
+<span class="kw">def</span> <span class="fn">query_db</span>(sql:, limit: <span class="num">10</span>)
+  DB.execute(sql).first(limit)
 <span class="kw">end</span>
-<span class="ms">~"find recent orders using query_db, store in &lt;orders&gt;"</span></pre>
+<span class="ms">~"use query_db to find recent orders, store in &lt;orders&gt;"</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM writes the code, Ruby runs it forever</span>
@@ -249,8 +250,8 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
       <p>LLM reads your variables with <code>&lt;var&gt;</code>, writes back with <code>write_var</code>. No serialization, no parsing — direct access to the Ruby binding.</p>
     </div>
     <div class="card">
-      <h3>⚡ Custom effects</h3>
-      <p>Define your own tools with <code>Mana.define_effect</code>. Block params become the tool schema. LLM calls them like native functions.</p>
+      <h3>⚡ Auto-discovery</h3>
+      <p>LLM discovers your Ruby functions automatically. Add comments for descriptions and <code>@param</code> for types — no registration needed.</p>
     </div>
     <div class="card">
       <h3>🧬 LLM compiler</h3>
@@ -261,8 +262,8 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
       <p>Prism AST parser auto-discovers your methods and their signatures. LLM knows what functions are available without you listing them.</p>
     </div>
     <div class="card">
-      <h3>🛡️ Effect system</h3>
-      <p>Built on algebraic effects theory. 6 built-in effects (read/write var, read/write attr, call func, done) + unlimited custom effects.</p>
+      <h3>🛡️ Tool system</h3>
+      <p>Built-in tools: read/write variables, read/write attributes, call functions, remember facts. All your Ruby functions become callable tools.</p>
     </div>
     <div class="card">
       <h3>🧠 Automatic memory</h3>
@@ -316,12 +317,14 @@ puts total  <span class="cmt"># =&gt; 579.6</span></pre>
   </div>
 
   <div class="ex">
-    <h3>Custom effect handlers</h3>
-    <p>Define your own tools. Block keyword params become the tool's input schema.</p>
-<pre>Mana.define_effect <span class="str">:query_db</span>,
-  description: <span class="str">"Execute a SQL query"</span> <span class="kw">do</span> |sql:|
-    ActiveRecord::Base.connection.execute(sql).to_a
-  <span class="kw">end</span>
+    <h3>Function discovery with comments</h3>
+    <p>Add comments above your functions — Mana extracts descriptions and types for the LLM.</p>
+<pre><span class="cmt"># Execute a SQL query and return results</span>
+<span class="cmt"># @param sql [String] the SQL query</span>
+<span class="cmt"># @param limit [Integer] max rows</span>
+<span class="kw">def</span> <span class="fn">query_db</span>(sql:, limit: <span class="num">10</span>)
+  ActiveRecord::Base.connection.execute(sql).first(limit)
+<span class="kw">end</span>
 
 <span class="ms">~"find the 5 most recent orders using query_db, store in &lt;orders&gt;"</span>
 orders.each { |o| puts o[<span class="str">"id"</span>] }</pre>
@@ -464,7 +467,7 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
     </div>
     <div class="step">
       <div class="sn">3</div>
-      <div class="st"><strong>LLM call</strong> — prompt + context sent with tools: <code>read_var</code>, <code>write_var</code>, <code>call_func</code>, <code>remember</code>, <code>done</code> + custom effects</div>
+      <div class="st"><strong>LLM call</strong> — prompt + context sent with tools: <code>read_var</code>, <code>write_var</code>, <code>call_func</code>, <code>remember</code>, <code>done</code></div>
     </div>
     <div class="step">
       <div class="sn">4</div>
@@ -492,7 +495,7 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   <p style="color:var(--dim);font-size:.9rem;line-height:1.8">
     📄 <a href="https://arxiv.org/abs/2512.14805">Sharing State Between Prompts and Programs</a> — the paper behind this approach<br>
     🐍 <a href="https://github.com/psg-mit/nightjarpy">nightjarpy</a> — MIT's Python implementation<br>
-    💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax, effect system, and LLM compiler
+    💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax and LLM compiler
   </p>
 </section>
 

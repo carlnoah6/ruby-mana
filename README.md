@@ -298,33 +298,36 @@ Mana.configure do |c|
 end
 ```
 
-### Custom effect handlers
+### Function discovery
 
-Define your own tools that the LLM can call. Each effect becomes an LLM tool automatically — the block's keyword parameters define the tool's input schema.
+Mana automatically discovers your Ruby functions and makes them available to the LLM. Add comments above your functions for better LLM understanding:
 
 ```ruby
-# No params
-Mana.define_effect :get_time do
-  Time.now.to_s
+# Query the database and return results
+# @param sql [String] the SQL query
+# @param limit [Integer] maximum rows to return
+def query_db(sql:, limit: 10)
+  ActiveRecord::Base.connection.execute(sql).first(limit)
 end
 
-# With params — keyword args become tool parameters
-Mana.define_effect :query_db do |sql:|
-  ActiveRecord::Base.connection.execute(sql).to_a
+# Search the web for information
+# @param query [String] search keywords
+def search_web(query:)
+  WebSearch.search(query)
 end
 
-# With description (optional, recommended)
-Mana.define_effect :search_web,
-  description: "Search the web for information" do |query:, max_results: 5|
-    WebSearch.search(query, limit: max_results)
-  end
-
-# Use in prompts
-~"get the current time and store in <now>"
-~"find recent orders using query_db, store in <orders>"
+~"use query_db to find recent orders, store in <orders>"
+~"search_web for 'ruby mana gem', store in <results>"
 ```
 
-Built-in effects (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`) are reserved and cannot be overridden.
+The LLM sees:
+```
+Available Ruby functions:
+  query_db(sql:, limit: ...) — Query the database and return results
+  search_web(query:) — Search the web for information
+```
+
+Both positional and keyword arguments are supported. Functions are discovered from the source file (via Prism AST) and from methods defined on `self`.
 
 ### Memory
 
