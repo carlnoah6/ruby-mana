@@ -635,7 +635,7 @@ module Mana
         when "tool_use"
           name = block[:name] || block["name"]
           input = block[:input] || block["input"]
-          vlog("🔧 #{name}(#{input.inspect})")
+          vlog("🔧 #{name}(#{summarize_input(input)})")
         end
       end
       result
@@ -656,6 +656,24 @@ module Mana
       highlighted.each_line do |line|
         $stderr.puts "\e[2m[mana]\e[0m   #{line.rstrip}"
       end
+    end
+
+    # Summarize tool input for compact logging.
+    # Multi-line string values are replaced with a brief summary.
+    def summarize_input(input)
+      return input.inspect unless input.is_a?(Hash)
+
+      summarized = input.map do |k, v|
+        if v.is_a?(String) && v.include?("\n")
+          lines = v.lines.size
+          words = v.split.size
+          first = v.lines.first&.strip&.slice(0, 30)
+          "#{k}: #{first}... (#{lines} lines, #{words} words)"
+        else
+          "#{k}: #{v.inspect}"
+        end
+      end
+      "{#{summarized.join(', ')}}"
     end
 
     # Minimal Ruby syntax highlighter using ANSI escape codes
