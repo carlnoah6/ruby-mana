@@ -172,4 +172,30 @@ RSpec.describe Mana::Config do
       expect(config.compact_model).to eq("claude-haiku")
     end
   end
+
+  describe "#validate!" do
+    it "raises ConfigError when api_key is nil" do
+      config.api_key = nil
+      expect { config.validate! }.to raise_error(Mana::ConfigError, /API key is not configured/)
+    end
+
+    it "raises ConfigError when api_key is whitespace" do
+      config.api_key = "   "
+      expect { config.validate! }.to raise_error(Mana::ConfigError, /API key is not configured/)
+    end
+
+    it "returns true when api_key is set" do
+      config.api_key = "sk-test"
+      expect(config.validate!).to be true
+    end
+  end
+
+  describe "MANA_TIMEOUT=0 validation" do
+    it "raises on zero timeout via env var" do
+      ENV["MANA_TIMEOUT"] = "0"
+      expect { Mana::Config.new }.to raise_error(ArgumentError, /timeout must be a positive number/)
+    ensure
+      ENV.delete("MANA_TIMEOUT")
+    end
+  end
 end

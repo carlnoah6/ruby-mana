@@ -15,16 +15,8 @@ module Mana
       # If backend is already an instance, use it directly
       return config.backend if config.backend.is_a?(Anthropic) || config.backend.is_a?(OpenAI)
 
-      # Validate API key before making any requests
-      if config.api_key.nil? || config.api_key.to_s.strip.empty?
-        raise ConfigError,
-          "API key is not configured. Set it via environment variable or Mana.configure:\n\n" \
-          "  export ANTHROPIC_API_KEY=your_key_here\n" \
-          "  # or\n" \
-          "  export OPENAI_API_KEY=your_key_here\n" \
-          "  # or\n" \
-          "  Mana.configure { |c| c.api_key = \"your_key_here\" }\n"
-      end
+      # Validate config before making any requests
+      config.validate!
 
       # Dispatch by explicit backend name or auto-detect from model name
       case config.backend&.to_s

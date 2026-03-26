@@ -20,6 +20,7 @@ module Mana
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
+    ANTHROPIC_MODEL_PATTERN = /^claude-/i
 
     # All config options can be set via environment variables:
     #   MANA_MODEL, MANA_VERBOSE, MANA_TIMEOUT, MANA_BACKEND
@@ -86,6 +87,21 @@ module Mana
       end
     end
 
+    # Validate configuration and raise early if something is wrong.
+    # Called automatically by Mana.configure, or manually via Mana.config.validate!
+    def validate!
+      if @api_key.nil? || @api_key.to_s.strip.empty?
+        raise ConfigError,
+          "API key is not configured. Set it via environment variable or Mana.configure:\n\n" \
+          "  export ANTHROPIC_API_KEY=your_key_here\n" \
+          "  # or\n" \
+          "  export OPENAI_API_KEY=your_key_here\n" \
+          "  # or\n" \
+          "  Mana.configure { |c| c.api_key = \"your_key_here\" }\n"
+      end
+      true
+    end
+
     private
 
     # Determine whether the current backend is Anthropic
@@ -94,7 +110,7 @@ module Mana
       when "anthropic" then true
       when "openai" then false
       # No explicit backend; auto-detect from model name pattern
-      else @model.match?(Backends::ANTHROPIC_PATTERNS)
+      else @model.match?(ANTHROPIC_MODEL_PATTERN)
       end
     end
   end
