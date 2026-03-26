@@ -51,14 +51,7 @@ module Mana
 
         # Cache filename based on source file + method name
         source_file = original.source_location&.first
-        # When prompt is extractable (real file), hash includes prompt content for auto-invalidation.
-        # When not extractable (IRB/eval), use method_name + params only — cache works but
-        # won't auto-invalidate on prompt change. Use Mana::Compiler.clear! to force regeneration.
-        if prompt
-          prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16]
-        else
-          prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}")[0, 16]
-        end
+        prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16]
         cache_path = cache_file_path(method_name, owner, source_file: source_file)
 
         # Load from cache if file exists and prompt hash matches
@@ -163,16 +156,16 @@ module Mana
         end
       end
 
-      # Extract the prompt string from the original method.
-      # The method body should be a single ~"..." expression.
       # Extract the prompt string from the original method's source code.
-      # Parses the method body to find the ~"..." expression.
+      # Two strategies:
+      #   1. Read the source file and parse ~"..." (works for .rb files)
+      #   2. Disassemble bytecode to find string literal (works for IRB/eval)
       def extract_prompt(unbound_method)
         source_loc = unbound_method.source_location
-        return nil unless source_loc
+        return extract_prompt_from_bytecode(unbound_method) unless source_loc
 
         file, line = source_loc
-        return nil unless file && File.exist?(file)
+        return extract_prompt_from_bytecode(unbound_method) unless file && File.exist?(file)
 
         lines = File.readlines(file)
         # Walk from the def line, tracking block depth to find the matching `end`
@@ -191,6 +184,19 @@ module Mana
         match = body.match(/~"([^"]*)"/) || body.match(/~'([^']*)'/)
         # Fall back to the raw method body (excluding def/end lines) if no pattern found
         match ? match[1] : body_lines[1...-1].join.strip
+      end
+
+      # Fallback: extract prompt from method bytecode (works in IRB/eval).
+      # Disassembles the method's instruction sequence to find the string literal.
+      def extract_prompt_from_bytecode(unbound_method)
+        iseq = RubyVM::InstructionSequence.of(unbound_method)
+        return nil unless iseq
+
+        # Match putstring or putchilledstring (Ruby 3.4+) instruction
+        match = iseq.disasm.match(/put(?:chilled)?string\s+"(.+?)"/)
+        match ? match[1] : nil
+      rescue
+        nil
       end
 
       # Build a human-readable parameter signature string from method parameters.
