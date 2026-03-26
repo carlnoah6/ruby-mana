@@ -125,7 +125,7 @@ RSpec.describe Mana::Compiler do
       original = klass.instance_method(:cached_method)
       params_desc = described_class.send(:describe_params, original)
       prompt = described_class.send(:extract_prompt, original)
-      prompt_hash = Digest::SHA256.hexdigest("cached_method:#{params_desc}:#{prompt}")[0, 16]
+      prompt_hash = Digest::SHA256.hexdigest("#{Mana::VERSION}:#{RUBY_VERSION}:cached_method:#{params_desc}:#{prompt}")[0, 16]
 
       # Pre-populate cache with matching prompt_hash
       source_file = original.source_location&.first
@@ -184,7 +184,7 @@ RSpec.describe Mana::Compiler do
       # Prompt is "return n tripled" — compute its hash
       params_desc = described_class.send(:describe_params, klass.instance_method(:changing_method))
       prompt = described_class.send(:extract_prompt, klass.instance_method(:changing_method))
-      current_hash = Digest::SHA256.hexdigest("changing_method:#{params_desc}:#{prompt}")[0, 16]
+      current_hash = Digest::SHA256.hexdigest("#{Mana::VERSION}:#{RUBY_VERSION}:changing_method:#{params_desc}:#{prompt}")[0, 16]
 
       # Pre-populate cache with DIFFERENT hash (simulates old prompt)
       source_file = klass.instance_method(:changing_method).source_location&.first

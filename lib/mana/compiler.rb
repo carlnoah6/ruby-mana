@@ -51,7 +51,8 @@ module Mana
 
         # Cache filename based on source file + method name
         source_file = original.source_location&.first
-        prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16]
+        # Include gem version and Ruby version so cache auto-invalidates on upgrade
+        prompt_hash = Digest::SHA256.hexdigest("#{Mana::VERSION}:#{RUBY_VERSION}:#{method_name}:#{params_desc}:#{prompt}")[0, 16]
         cache_path = cache_file_path(method_name, owner, source_file: source_file)
 
         # Load from cache if file exists and prompt hash matches
