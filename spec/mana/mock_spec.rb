@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "mana/test"
+require "mana"
 
 RSpec.describe Mana::Mock do
   before do

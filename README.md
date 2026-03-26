@@ -390,7 +390,7 @@ end
 Use `Mana.mock` to test code that uses `~"..."` without calling any API:
 
 ```ruby
-require "mana/test"
+require "mana"
 
 RSpec.describe MyApp do
   include Mana::TestHelpers

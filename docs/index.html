@@ -179,7 +179,7 @@ puts report  <span class="cmt"># each nested call gets its own context</span></p
     </div>
     <div class="slide">
 <pre><span class="cmt"># Test mode — no API calls needed</span>
-<span class="kw">require</span> <span class="str">"mana/test"</span>
+<span class="kw">require</span> <span class="str">"mana"</span>
 
 mock_prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
 mock_prompt(<span class="str">/translate/</span>) { |p| { output: <span class="str">"hola"</span> } }
@@ -383,7 +383,7 @@ Mana.incognito <span class="kw">do</span>
   <div class="ex">
     <h3>Testing — mock mode</h3>
     <p>Stub LLM responses by pattern. No API key or network needed in tests.</p>
-<pre><span class="kw">require</span> <span class="str">"mana/test"</span>
+<pre><span class="kw">require</span> <span class="str">"mana"</span>
 
 RSpec.describe MyApp <span class="kw">do</span>
   include Mana::TestHelpers

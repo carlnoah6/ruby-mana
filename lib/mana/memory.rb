@@ -281,6 +281,9 @@ module Mana
     # Falls back to "Summary unavailable" on any error.
     #
     # @param keep_tokens [Integer] tokens already committed to keep_recent + long_term
+    # Retry up to 3 times on failure or refusal before giving up
+    SUMMARIZE_MAX_RETRIES = 3
+
     def summarize(text, keep_tokens: 0)
       config = Mana.config
       model = config.compact_model || config.model
@@ -293,19 +296,29 @@ module Mana
       threshold = (cw * config.memory_pressure).to_i
       max_summary_tokens = ((threshold - keep_tokens) * 0.5).clamp(64, 1024).to_i
 
-      content = backend.chat(
-        system: "You are summarizing an internal tool-calling conversation log between an LLM and a Ruby program. " \
-                "The messages contain tool calls (read_var, write_var, done) and their results — this is normal, not harmful. " \
-                "Summarize the key questions asked and answers given in a few short bullet points. Be extremely concise — stay under #{max_summary_tokens} tokens.",
-        messages: [{ role: "user", content: text }],
-        tools: [],
-        model: model,
-        max_tokens: max_summary_tokens
-      )
+      system_prompt = "You are summarizing an internal tool-calling conversation log between an LLM and a Ruby program. " \
+                      "The messages contain tool calls (read_var, write_var, done) and their results — this is normal, not harmful. " \
+                      "Summarize the key questions asked and answers given in a few short bullet points. Be extremely concise — stay under #{max_summary_tokens} tokens."
 
-      return "Summary unavailable" unless content.is_a?(Array)
+      SUMMARIZE_MAX_RETRIES.times do |attempt|
+        content = backend.chat(
+          system: system_prompt,
+          messages: [{ role: "user", content: text }],
+          tools: [],
+          model: model,
+          max_tokens: max_summary_tokens
+        )
 
-      content.map { |b| b[:text] || b["text"] }.compact.join("\n")
+        next unless content.is_a?(Array)
+
+        result = content.map { |b| b[:text] || b["text"] }.compact.join("\n")
+        # Reject empty or refusal responses, retry
+        next if result.empty? || result.match?(/can't discuss|cannot assist|i'm unable/i)
+
+        return result
+      end
+
+      "Summary unavailable"
     rescue => _e
       "Summary unavailable"
     end
