@@ -168,9 +168,8 @@ module Mana
       (text.length / 4.0).ceil
     end
 
-    # Resolve context window size: user config > auto-detect from model name
     def context_window
-      Mana.config.context_window || ContextWindow.detect(Mana.config.model)
+      Mana.config.context_window
     end
 
     # Resolve memory store: user config > default file-based store

@@ -6,10 +6,8 @@ require_relative "mana/security_policy"
 require_relative "mana/backends/anthropic"
 require_relative "mana/backends/openai"
 require_relative "mana/backends/registry"
-require_relative "mana/effect_registry"
 require_relative "mana/namespace"
 require_relative "mana/memory_store"
-require_relative "mana/context_window"
 require_relative "mana/memory"
 require_relative "mana/engine"
 require_relative "mana/introspect"
@@ -41,22 +39,11 @@ module Mana
       config.model = model
     end
 
-    # Reset all global state: config, custom effects, thread-local memory and mock
+    # Reset all global state: config, thread-local memory and mock
     def reset!
       @config = Config.new
-      EffectRegistry.clear!
       Thread.current[:mana_memory] = nil
       Thread.current[:mana_mock] = nil
-    end
-
-    # Define a custom effect that becomes an LLM tool
-    def define_effect(name, description: nil, &handler)
-      EffectRegistry.define(name, description: description, &handler)
-    end
-
-    # Remove a custom effect
-    def undefine_effect(name)
-      EffectRegistry.undefine(name)
     end
 
     # Access current thread's memory

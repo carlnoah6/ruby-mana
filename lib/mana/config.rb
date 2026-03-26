@@ -40,7 +40,7 @@ module Mana
       @namespace = nil
       @memory_store = nil
       @memory_path = nil
-      @context_window = nil
+      @context_window = 128_000
       @memory_pressure = 0.7
       @memory_keep_recent = 4
       @compact_model = nil

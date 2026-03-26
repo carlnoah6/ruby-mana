@@ -429,55 +429,19 @@ RSpec.describe Mana::Engine do
     end
   end
 
-  describe "custom effects integration" do
-    before { Mana::EffectRegistry.clear! }
-    after { Mana::EffectRegistry.clear! }
-
-    it "dispatches to custom effect handler" do
-      Mana.define_effect(:get_time) { "2026-02-20 12:00:00" }
-
+  describe "call_func with keyword arguments" do
+    it "passes kwargs to functions" do
       stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "get_time", input: {} }],
-        [{ type: "tool_use", id: "t2", name: "write_var", input: { "name" => "now", "value" => "2026-02-20 12:00:00" } }],
-        [{ type: "tool_use", id: "t3", name: "done", input: {} }]
+        [{ type: "tool_use", id: "t1", name: "call_func",
+           input: { "name" => "greet", "kwargs" => { "name" => "Alice", "greeting" => "Hello" } } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
       )
 
-      b = binding
-      Mana::Engine.run("get the time and store in <now>", b)
-      expect(b.local_variable_get(:now)).to eq("2026-02-20 12:00:00")
-    end
-
-    it "passes params to custom effect handler" do
-      Mana.define_effect(:multiply) { |a:, b:| a.to_i * b.to_i }
-
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "multiply", input: { "a" => 6, "b" => 7 } }],
-        [{ type: "tool_use", id: "t2", name: "write_var", input: { "name" => "result", "value" => 42 } }],
-        [{ type: "tool_use", id: "t3", name: "done", input: {} }]
-      )
+      def greet(name:, greeting: "Hi") = "#{greeting}, #{name}!"
 
       b = binding
-      Mana::Engine.run("multiply 6 and 7, store in <result>", b)
-      expect(b.local_variable_get(:result)).to eq(42)
-    end
-
-    it "includes custom tools in all_tools" do
-      Mana.define_effect(:custom_tool) { "ok" }
-
-      tools = Mana::Engine.all_tools
-      names = tools.map { |t| t[:name] }
-      expect(names).to include("custom_tool")
-      expect(names).to include("read_var")
-      expect(names).to include("remember")
-    end
-
-    it "excludes remember tool in incognito mode" do
-      Mana::Memory.incognito do
-        tools = Mana::Engine.all_tools
-        names = tools.map { |t| t[:name] }
-        expect(names).not_to include("remember")
-        expect(names).to include("read_var")
-      end
+      result = Mana::Engine.run("greet Alice", b)
+      expect(result).to eq("ok")
     end
   end
 

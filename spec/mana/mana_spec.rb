@@ -50,13 +50,6 @@ RSpec.describe Mana do
       expect(Thread.current[:mana_memory]).to be_nil
     end
 
-    it "clears custom effects" do
-      Mana.define_effect(:test_effect, description: "test") { "result" }
-      expect(Mana::EffectRegistry.tool_definitions).not_to be_empty
-      Mana.reset!
-      expect(Mana::EffectRegistry.tool_definitions).to be_empty
-    end
-
   end
 
   describe ".memory" do
@@ -81,17 +74,6 @@ RSpec.describe Mana do
     end
   end
 
-  describe ".define_effect / .undefine_effect" do
-    after { Mana::EffectRegistry.clear! }
-
-    it "registers and removes custom effects" do
-      Mana.define_effect(:my_tool, description: "does stuff") { |params| params }
-      expect(Mana::EffectRegistry.tool_definitions.map { |t| t[:name] }).to include("my_tool")
-
-      Mana.undefine_effect(:my_tool)
-      expect(Mana::EffectRegistry.tool_definitions.map { |t| t[:name] }).not_to include("my_tool")
-    end
-  end
 
   describe ".source" do
     it "delegates to Compiler.source" do

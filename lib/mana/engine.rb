@@ -57,12 +57,13 @@ module Mana
       },
       {
         name: "call_func",
-        description: "Call a Ruby method/function available in the current scope.",
+        description: "Call a Ruby method/function available in the current scope. Use kwargs for keyword arguments.",
         input_schema: {
           type: "object",
           properties: {
             name: { type: "string", description: "Function/method name" },
-            args: { type: "array", description: "Arguments to pass", items: {} }
+            args: { type: "array", description: "Positional arguments", items: {} },
+            kwargs: { type: "object", description: "Keyword arguments (e.g. {sql: '...', limit: 10})" }
           },
           required: ["name"]
         }
@@ -100,11 +101,11 @@ module Mana
         new(caller_binding).execute(prompt)
       end
 
-      # Built-in tools + remember + any registered custom effects
+      # Built-in tools + remember
       def all_tools
         tools = TOOLS.dup
         tools << REMEMBER_TOOL unless Memory.incognito?
-        tools + Mana::EffectRegistry.tool_definitions
+        tools
       end
     end
 
@@ -375,33 +376,18 @@ module Mana
         parts << Mana::Introspect.format_for_prompt(all_methods)
       end
 
-      # Append custom effect descriptions so the LLM knows about user-defined tools
-      custom_effects = Mana::EffectRegistry.tool_definitions
-      unless custom_effects.empty?
-        parts << ""
-        parts << "Custom tools available:"
-        custom_effects.each do |t|
-          params = (t[:input_schema][:properties] || {}).keys.join(", ")
-          parts << "  #{t[:name]}(#{params}) — #{t[:description]}"
-        end
-      end
-
       parts.join("\n")
     end
 
     # --- Effect Handling ---
 
     # Dispatch a single tool call from the LLM.
-    # Checks custom effects first, then handles built-in tools.
+    # Handle built-in tool calls from the LLM.
     def handle_effect(tool_use, memory = nil)
       name = tool_use[:name]
       input = tool_use[:input] || {}
       # Normalize keys to strings for consistent access
       input = input.transform_keys(&:to_s) if input.is_a?(Hash)
-
-      # Check custom effect registry before built-in tools
-      handled, result = Mana::EffectRegistry.handle(name, input)
-      return serialize_value(result) if handled
 
       case name
       when "read_var"
@@ -435,6 +421,7 @@ module Mana
       when "call_func"
         func = input["name"]
         args = input["args"] || []
+        kwargs = (input["kwargs"] || {}).transform_keys(&:to_sym)
         policy = @config.security
 
         # Handle chained calls (e.g. Time.now, Time.now.to_s, File.read)
@@ -487,8 +474,9 @@ module Mana
                    else
                      raise NameError, "undefined function '#{func}'"
                    end
-        result = callable.call(*args)
-        vlog_value("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) →", result)
+        result = kwargs.empty? ? callable.call(*args) : callable.call(*args, **kwargs)
+        call_desc = args.map(&:inspect).concat(kwargs.map { |k, v| "#{k}: #{v.inspect}" }).join(", ")
+        vlog_value("   ↩ #{func}(#{call_desc}) →", result)
         serialize_value(result)
 
       when "remember"
