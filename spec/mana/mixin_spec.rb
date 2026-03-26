@@ -63,5 +63,27 @@ RSpec.describe Mana::Mixin do
       obj = klass.new
       expect(obj.double(5)).to eq(10)
     end
+
+    it "preserves private visibility" do
+      generated_code = "def secret(n)\n  n * 3\nend"
+      allow(Mana::Compiler).to receive(:generate).and_return(generated_code)
+
+      klass = Class.new do
+        include Mana::Mixin
+        private
+        mana def secret(n)
+          ~"return n tripled"
+        end
+      end
+
+      obj = klass.new
+      expect { obj.secret(5) }.to raise_error(NoMethodError, /private/)
+      expect(obj.send(:secret, 5)).to eq(15)
+    end
+
+    it "works at top level (main object)" do
+      # Top-level mana is defined in mixin.rb on Object's singleton class
+      expect(TOPLEVEL_BINDING.eval("respond_to?(:mana)")).to be true
+    end
   end
 end

@@ -481,4 +481,75 @@ RSpec.describe "Nested prompts" do
       expect(Thread.current[:mana_depth]).to eq(0)
     end
   end
+
+  describe "error scenarios" do
+    it "inner LLM error does not crash outer call" do
+      # Outer call triggers a function that calls ~"..." (inner)
+      # Inner call hits an HTTP error
+      call_count = 0
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return do
+          call_count += 1
+          if call_count <= 2
+            # Outer LLM calls a function
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t1", name: "call_func",
+                  input: { "name" => "risky_func" } }]
+              })
+            }
+          elsif call_count == 3
+            # Inner LLM (from risky_func) errors
+            { status: 500, body: "Internal Server Error" }
+          else
+            # Outer LLM handles the error gracefully
+            {
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: JSON.generate({
+                content: [{ type: "tool_use", id: "t2", name: "done",
+                  input: { "result" => "handled" } }]
+              })
+            }
+          end
+        end
+
+      def risky_func
+        ~"do something risky"
+      rescue Mana::LLMError
+        "inner error caught"
+      end
+
+      b = binding
+      # Outer call should complete — inner error is caught by risky_func
+      result = Mana::Engine.run("call risky_func and store in <result>", b)
+      expect(Thread.current[:mana_depth]).to eq(0)
+    end
+
+    it "restores memory after nested error" do
+      outer_memory = Mana.memory
+      outer_memory.short_term << { role: "user", content: "outer context" }
+
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(status: 500, body: "error")
+
+      def failing_func
+        ~"will fail"
+      rescue Mana::LLMError
+        "failed"
+      end
+
+      begin
+        b = binding
+        Mana::Engine.run("call failing_func", b)
+      rescue Mana::LLMError
+        # Expected
+      end
+
+      # Outer memory should still be intact
+      expect(Thread.current[:mana_depth]).to eq(0)
+    end
+  end
 end
