@@ -219,15 +219,26 @@ RSpec.describe Mana::Compiler do
       expect(described_class).to have_received(:generate)
     end
 
-    it "extracts prompt from bytecode when source file unavailable" do
+    it "extracts prompt from instruction sequence when source file unavailable (IRB/eval)" do
       # Define the method via eval so source file doesn't exist
       klass = Class.new
-      klass.class_eval('def bytecode_method(n); ~"return n doubled"; end', "(irb)", 1)
+      klass.class_eval('def iseq_method(n); ~"return n doubled"; end', "(irb)", 1)
 
-      original = klass.instance_method(:bytecode_method)
-      # File path is "(irb)" — extract_prompt falls through to bytecode
+      original = klass.instance_method(:iseq_method)
+      # File path is "(irb)" — extract_prompt falls through to iseq extraction
       prompt = described_class.send(:extract_prompt, original)
       expect(prompt).to eq("return n doubled")
+    end
+
+    it "extracts multi-line prompt from instruction sequence" do
+      klass = Class.new
+      klass.class_eval("def multi_method(n)\n  ~\"line one\\nline two\\nline three\"\nend", "(irb)", 1)
+
+      original = klass.instance_method(:multi_method)
+      prompt = described_class.send(:extract_prompt, original)
+      expect(prompt).to include("line one")
+      expect(prompt).to include("line two")
+      expect(prompt).to include("line three")
     end
 
     it "auto-invalidates cache when prompt changes (even without source file)" do
