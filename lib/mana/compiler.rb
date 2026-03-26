@@ -60,8 +60,17 @@ module Mana
 
         # Cache filename based on source file + method name
         source_file = original.source_location&.first
-        # Include gem version and Ruby version so cache auto-invalidates on upgrade
-        prompt_hash = Digest::SHA256.hexdigest("#{Mana::VERSION}:#{RUBY_VERSION}:#{method_name}:#{params_desc}:#{prompt}")[0, 16]
+        # Include gem version, Ruby version, and sibling function signatures so cache
+        # auto-invalidates when the gem upgrades, Ruby upgrades, or dependency functions change.
+        sibling_methods = begin
+          Mana::Introspect.methods_from_file(source_file)
+            .reject { |m| m[:name] == method_name.to_s }
+            .map { |m| "#{m[:name]}(#{m[:params].join(',')})" }
+            .sort.join(";")
+        rescue
+          ""
+        end
+        prompt_hash = Digest::SHA256.hexdigest("#{Mana::VERSION}:#{RUBY_VERSION}:#{method_name}:#{params_desc}:#{prompt}:#{sibling_methods}")[0, 16]
         cache_path = cache_file_path(method_name, owner, source_file: source_file)
 
         # Load from cache if file exists and prompt hash matches

@@ -106,7 +106,7 @@ module Mana
             function: {
               name: tool[:name],
               description: tool[:description] || "",
-              parameters: tool[:input_schema] || {}
+              parameters: (tool[:input_schema] || {}).reject { |k, _| k.to_s == "$schema" }
             }
           }
         end

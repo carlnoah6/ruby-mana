@@ -319,7 +319,10 @@ module Mana
       end
 
       "Summary unavailable"
-    rescue => _e
+    rescue ConfigError
+      raise  # Configuration errors should not be silently swallowed
+    rescue => e
+      $stderr.puts "Mana compaction error: #{e.message}" if $DEBUG
       "Summary unavailable"
     end
   end
