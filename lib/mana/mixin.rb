@@ -11,8 +11,8 @@ module Mana
     module ClassMethods
       # Mark a method for LLM compilation.
       # Usage:
-      #   mana def fizzbuzz(n)
-      #     ~"return FizzBuzz array from 1 to n"
+      #   mana def fibonacci(n)
+      #     ~"return an array of the first n Fibonacci numbers"
       #   end
       def mana(method_name)
         Mana::Compiler.compile(self, method_name)

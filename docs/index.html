@@ -150,10 +150,10 @@ Mana.define_effect <span class="str">:query_db</span> <span class="kw">do</span>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM writes the code, Ruby runs it forever</span>
-<span class="kw">mana def</span> <span class="fn">fizzbuzz</span>(n)
-  <span class="ms">~"return FizzBuzz array from 1 to n"</span>
+<span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
+  <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
 <span class="kw">end</span>
-fizzbuzz(<span class="num">15</span>)  <span class="cmt"># generated once → cached → pure Ruby</span></pre>
+fibonacci(<span class="num">10</span>)  <span class="cmt"># generated once → cached → pure Ruby</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM calls your functions automatically</span>
@@ -330,14 +330,14 @@ orders.each { |o| puts o[<span class="str">"id"</span>] }</pre>
   <div class="ex">
     <h3>LLM-compiled methods</h3>
     <p>LLM writes the implementation once, caches it as a real <code>.rb</code> file. After that, pure Ruby.</p>
-<pre><span class="kw">mana def</span> <span class="fn">fizzbuzz</span>(n)
-  <span class="ms">~"return an array of FizzBuzz results from 1 to n"</span>
+<pre><span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
+  <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
 <span class="kw">end</span>
 
-fizzbuzz(<span class="num">15</span>)  <span class="cmt"># first call → LLM generates → .mana_cache/fizzbuzz.rb</span>
-fizzbuzz(<span class="num">20</span>)  <span class="cmt"># pure Ruby, zero API cost</span>
+fibonacci(<span class="num">10</span>)  <span class="cmt"># first call → LLM generates → cached</span>
+fibonacci(<span class="num">20</span>)  <span class="cmt"># pure Ruby, zero API cost</span>
 
-puts Mana.source(<span class="str">:fizzbuzz</span>)  <span class="cmt"># view the generated code</span></pre>
+puts Mana.source(<span class="str">:fibonacci</span>)  <span class="cmt"># view the generated code</span></pre>
   </div>
 
   <div class="ex">

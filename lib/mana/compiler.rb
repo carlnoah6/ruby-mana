@@ -8,14 +8,14 @@ module Mana
   # caches them as real .rb files, and replaces the method with native Ruby.
   #
   # Usage:
-  #   mana def fizzbuzz(n)
-  #     ~"return an array of FizzBuzz results from 1 to n"
+  #   mana def fibonacci(n)
+  #     ~"return an array of the first n Fibonacci numbers"
   #   end
   #
-  #   fizzbuzz(15)  # first call → LLM generates code → cached → executed
-  #   fizzbuzz(20)  # subsequent calls → pure Ruby, zero API overhead
+  #   fibonacci(10)  # first call → LLM generates code → cached → executed
+  #   fibonacci(20)  # subsequent calls → pure Ruby, zero API overhead
   #
-  #   Mana.source(:fizzbuzz)  # view generated source
+  #   Mana.source(:fibonacci)  # view generated source
   module Compiler
     class << self
       # Registry of compiled method sources: { "ClassName#method" => source_code }

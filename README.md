@@ -155,23 +155,21 @@ Each nested call gets its own conversation context. The outer LLM only sees the 
 `mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
 
 ```ruby
-mana def fizzbuzz(n)
-  ~"return an array of FizzBuzz results from 1 to n"
+mana def fibonacci(n)
+  ~"return an array of the first n Fibonacci numbers"
 end
 
-fizzbuzz(15)  # first call → LLM generates code → cached → executed
-fizzbuzz(20)  # pure Ruby from .mana_cache/fizzbuzz.rb
+fibonacci(10)  # first call → LLM generates code → cached → executed
+fibonacci(20)  # pure Ruby from .mana_cache/
 
 # View the generated source
-puts Mana.source(:fizzbuzz)
-# def fizzbuzz(n)
-#   (1..n).map do |i|
-#     if i % 15 == 0 then "FizzBuzz"
-#     elsif i % 3 == 0 then "Fizz"
-#     elsif i % 5 == 0 then "Buzz"
-#     else i.to_s
-#     end
-#   end
+puts Mana.source(:fibonacci)
+# def fibonacci(n)
+#   return [] if n <= 0
+#   return [0] if n == 1
+#   fib = [0, 1]
+#   (2...n).each { |i| fib << fib[i-1] + fib[i-2] }
+#   fib
 # end
 
 # Works in classes too

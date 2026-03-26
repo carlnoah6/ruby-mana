@@ -4,19 +4,19 @@
 require "mana"
 
 # Define a method with natural language — LLM generates the implementation
-mana def fizzbuzz(n)
-  ~"return an array of FizzBuzz results from 1 to n"
+mana def fibonacci(n)
+  ~"return an array of the first n Fibonacci numbers"
 end
 
-# First call triggers LLM compilation → cached to .mana_cache/fizzbuzz.rb
-puts fizzbuzz(15).inspect
+# First call triggers LLM compilation → cached to .mana_cache/
+puts fibonacci(10).inspect
 
 # View the generated source
 puts "\n--- Generated source ---"
-puts Mana.source(:fizzbuzz)
+puts Mana.source(:fibonacci)
 
 # Second call is pure Ruby — zero API overhead
-puts "\nfizzbuzz(5) = #{fizzbuzz(5).inspect}"
+puts "\nfibonacci(5) = #{fibonacci(5).inspect}"
 
 # Works with classes too
 class Converter
