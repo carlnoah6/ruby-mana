@@ -407,7 +407,7 @@ module Mana
       when "read_var"
         # Read a variable from the caller's binding and return its serialized value
         val = serialize_value(resolve(input["name"]))
-        vlog("   ↩ #{input['name']} = #{val}")
+        vlog_value("   ↩ #{input['name']} =", val)
         val
 
       when "write_var"
@@ -416,12 +416,7 @@ module Mana
         value = input["value"]
         write_local(var_name, value)
         @written_vars[var_name] = value
-        if value.is_a?(String) && value.include?("\n")
-          vlog("   ✅ #{var_name} =")
-          vlog_code(value)
-        else
-          vlog("   ✅ #{var_name} = #{value.inspect}")
-        end
+        vlog_value("   ✅ #{var_name} =", value)
         "ok: #{var_name} = #{value.inspect}"
 
       when "read_attr"
@@ -472,7 +467,7 @@ module Mana
             result = result.public_send(m.to_sym)
           end
 
-          vlog("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) → #{result.inspect}")
+          vlog_value("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) →", result)
           return serialize_value(result)
         end
 
@@ -493,7 +488,7 @@ module Mana
                      raise NameError, "undefined function '#{func}'"
                    end
         result = callable.call(*args)
-        vlog("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) → #{result.inspect}")
+        vlog_value("   ↩ #{func}(#{args.map(&:inspect).join(', ')}) →", result)
         serialize_value(result)
 
       when "remember"
@@ -510,12 +505,7 @@ module Mana
       when "done"
         # Signal task completion; the result becomes the return value
         done_val = input["result"]
-        if done_val.is_a?(String) && done_val.include?("\n")
-          vlog("🏁 Done:")
-          vlog_code(done_val)
-        else
-          vlog("🏁 Done: #{done_val.inspect}")
-        end
+        vlog_value("🏁 Done:", done_val)
         vlog("═" * 60)
         input["result"].to_s
 
@@ -646,6 +636,48 @@ module Mana
       return unless @config.verbose
 
       $stderr.puts "\e[2m[mana] #{msg}\e[0m"
+    end
+
+    # Log a value with smart formatting:
+    #   - Multi-line strings: highlighted code block
+    #   - Long strings (>200 chars): truncated with char count
+    #   - Long arrays/hashes (>5 items): truncated with item count
+    #   - Everything else: inline inspect
+    def vlog_value(prefix, value)
+      return unless @config.verbose
+
+      case value
+      when String
+        if value.include?("\n")
+          vlog(prefix)
+          vlog_code(value)
+        elsif value.length > 200
+          vlog("#{prefix} #{value[0, 80].inspect}... (#{value.length} chars)")
+        else
+          vlog("#{prefix} #{value.inspect}")
+        end
+      when Array
+        if value.length > 5
+          preview = value.first(3).map(&:inspect).join(", ")
+          vlog("#{prefix} [#{preview}, ...] (#{value.length} items)")
+        else
+          vlog("#{prefix} #{value.inspect}")
+        end
+      when Hash
+        if value.length > 5
+          preview = value.first(3).map { |k, v| "#{k.inspect}=>#{v.inspect}" }.join(", ")
+          vlog("#{prefix} {#{preview}, ...} (#{value.length} keys)")
+        else
+          vlog("#{prefix} #{value.inspect}")
+        end
+      else
+        str = value.inspect
+        if str.length > 200
+          vlog("#{prefix} #{str[0, 80]}... (#{str.length} chars)")
+        else
+          vlog("#{prefix} #{str}")
+        end
+      end
     end
 
     # Log a code block with Ruby syntax highlighting to stderr
