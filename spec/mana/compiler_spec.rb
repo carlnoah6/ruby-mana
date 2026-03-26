@@ -219,6 +219,58 @@ RSpec.describe Mana::Compiler do
       tmpfile.close
       tmpfile.unlink
     end
+
+    it "extracts multi-line prompt" do
+      tmpfile = Tempfile.new(["mana_test", ".rb"])
+      tmpfile.write(<<~RUBY)
+        def bar(n)
+          ~"line one
+          line two
+          line three"
+        end
+      RUBY
+      tmpfile.rewind
+
+      mock_method = double("unbound_method", source_location: [tmpfile.path, 1])
+      result = described_class.send(:extract_prompt, mock_method)
+      expect(result).to include("line one")
+      expect(result).to include("line two")
+      expect(result).to include("line three")
+    ensure
+      tmpfile.close
+      tmpfile.unlink
+    end
+
+    it "handles string with escaped quotes" do
+      tmpfile = Tempfile.new(["mana_test", ".rb"])
+      tmpfile.write("def baz\n  ~\"return \\\"hello\\\" world\"\nend\n")
+      tmpfile.rewind
+
+      mock_method = double("unbound_method", source_location: [tmpfile.path, 1])
+      result = described_class.send(:extract_prompt, mock_method)
+      expect(result).to include("hello")
+      expect(result).to include("world")
+    ensure
+      tmpfile.close
+      tmpfile.unlink
+    end
+
+    it "not confused by if/def keywords inside strings" do
+      tmpfile = Tempfile.new(["mana_test", ".rb"])
+      tmpfile.write(<<~RUBY)
+        def tricky
+          ~"if the def is end, return begin"
+        end
+      RUBY
+      tmpfile.rewind
+
+      mock_method = double("unbound_method", source_location: [tmpfile.path, 1])
+      result = described_class.send(:extract_prompt, mock_method)
+      expect(result).to eq("if the def is end, return begin")
+    ensure
+      tmpfile.close
+      tmpfile.unlink
+    end
   end
 
   describe ".cache_file_path" do

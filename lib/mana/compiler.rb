@@ -157,10 +157,9 @@ module Mana
         end
       end
 
-      # Extract the prompt string from the original method's source code.
-      # Two strategies:
-      #   1. Read the source file and parse ~"..." (works for .rb files)
-      #   2. Disassemble bytecode to find string literal (works for IRB/eval)
+      # Extract the prompt string from the original method.
+      # Strategy 1: Parse source file with Prism AST (handles multi-line, heredoc, escapes)
+      # Strategy 2: Disassemble bytecode (fallback for IRB/eval)
       def extract_prompt(unbound_method)
         source_loc = unbound_method.source_location
         return extract_prompt_from_bytecode(unbound_method) unless source_loc
@@ -168,23 +167,34 @@ module Mana
         file, line = source_loc
         return extract_prompt_from_bytecode(unbound_method) unless file && File.exist?(file)
 
-        lines = File.readlines(file)
-        # Walk from the def line, tracking block depth to find the matching `end`
-        body_lines = []
-        depth = 0
-        (line - 1...lines.length).each do |i|
-          l = lines[i]
-          depth += l.scan(/\bdef\b|\bdo\b|\bclass\b|\bmodule\b|\bif\b|\bunless\b|\bcase\b|\bwhile\b|\buntil\b|\bbegin\b/).length
-          depth -= l.scan(/\bend\b/).length
-          body_lines << l
-          break if depth <= 0
+        # Parse with Prism AST — finds ~@ call on a string node
+        source = File.read(file)
+        result = Prism.parse(source)
+
+        # Walk AST to find the DefNode at the right line, then find ~@ inside it
+        prompt = nil
+        queue = [result.value]
+        while (node = queue.shift)
+          next unless node.respond_to?(:compact_child_nodes)
+
+          if node.is_a?(Prism::DefNode) && node.location.start_line == line
+            # Found our method — now find the ~"..." call inside
+            inner_queue = node.compact_child_nodes.dup
+            while (inner = inner_queue.shift)
+              next unless inner.respond_to?(:compact_child_nodes)
+              if inner.is_a?(Prism::CallNode) && inner.name == :~@ && inner.receiver.is_a?(Prism::StringNode)
+                prompt = inner.receiver.unescaped
+                break
+              end
+              inner_queue.concat(inner.compact_child_nodes)
+            end
+            break
+          end
+
+          queue.concat(node.compact_child_nodes)
         end
 
-        # Extract the prompt string from ~"..." or ~'...' pattern
-        body = body_lines.join
-        match = body.match(/~"([^"]*)"/) || body.match(/~'([^']*)'/)
-        # Fall back to the raw method body (excluding def/end lines) if no pattern found
-        match ? match[1] : body_lines[1...-1].join.strip
+        prompt || extract_prompt_from_bytecode(unbound_method)
       end
 
       # Fallback: extract prompt from method bytecode (works in IRB/eval).
