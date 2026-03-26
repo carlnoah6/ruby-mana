@@ -177,13 +177,13 @@ module Mana
 
       # Extract the prompt string from the original method.
       # Strategy 1: Parse source file with Prism AST (handles multi-line, heredoc, escapes)
-      # Strategy 2: Disassemble bytecode (fallback for IRB/eval)
+      # Strategy 2: Extract from instruction sequence (fallback for IRB/eval)
       def extract_prompt(unbound_method)
         source_loc = unbound_method.source_location
-        return extract_prompt_from_bytecode(unbound_method) unless source_loc
+        return extract_prompt_from_iseq(unbound_method) unless source_loc
 
         file, line = source_loc
-        return extract_prompt_from_bytecode(unbound_method) unless file && File.exist?(file)
+        return extract_prompt_from_iseq(unbound_method) unless file && File.exist?(file)
 
         # Parse with Prism AST — finds ~@ call on a string node
         source = File.read(file)
@@ -212,18 +212,24 @@ module Mana
           queue.concat(node.compact_child_nodes)
         end
 
-        prompt || extract_prompt_from_bytecode(unbound_method)
+        prompt || extract_prompt_from_iseq(unbound_method)
       end
 
-      # Fallback: extract prompt from method bytecode (works in IRB/eval).
-      # Disassembles the method's instruction sequence to find the string literal.
-      def extract_prompt_from_bytecode(unbound_method)
+      # Fallback: extract prompt from method instruction sequence (works in IRB/eval).
+      # Uses iseq.to_a to find the string literal directly — more reliable than disasm
+      # because it preserves real newlines (disasm escapes them as \\n).
+      def extract_prompt_from_iseq(unbound_method)
         iseq = RubyVM::InstructionSequence.of(unbound_method)
         return nil unless iseq
 
-        # Match putstring or putchilledstring (Ruby 3.4+) instruction
-        match = iseq.disasm.match(/put(?:chilled)?string\s+"(.+?)"/)
-        match ? match[1] : nil
+        # Walk the flattened instruction array to find putstring/putchilledstring
+        flat = iseq.to_a.flatten
+        flat.each_with_index do |item, i|
+          if (item == :putchilledstring || item == :putstring) && flat[i + 1].is_a?(String)
+            return flat[i + 1]
+          end
+        end
+        nil
       rescue
         nil
       end
