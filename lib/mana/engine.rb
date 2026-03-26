@@ -435,7 +435,7 @@ module Mana
       when "call_func"
         func = input["name"]
         args = input["args"] || []
-        policy = @config.security_policy
+        policy = @config.security
 
         # Handle chained calls (e.g. Time.now, Time.now.to_s, File.read)
         if func.include?(".")

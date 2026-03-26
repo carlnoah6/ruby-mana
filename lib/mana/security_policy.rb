@@ -17,7 +17,7 @@ module Mana
   #   Mana.configure { |c| c.security = 2 }
   #   Mana.configure do |c|
   #     c.security = :strict
-  #     c.security_policy.allow_receiver "File", only: %w[read exist?]
+  #     c.security.allow_receiver "File", only: %w[read exist?]
   #   end
   class SecurityPolicy
     LEVELS = { sandbox: 0, strict: 1, standard: 2, permissive: 3, danger: 4 }.freeze

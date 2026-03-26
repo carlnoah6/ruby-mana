@@ -199,7 +199,7 @@ Mana.configure <span class="kw">do</span> |c|
 <pre><span class="cmt"># Security levels — fine-grained control</span>
 Mana.configure <span class="kw">do</span> |c|
   c.security = <span class="str">:standard</span>  <span class="cmt"># level 2: + read filesystem</span>
-  c.security_policy.allow_receiver <span class="str">"File"</span>, only: [<span class="str">"read"</span>]
+  c.security.allow_receiver <span class="str">"File"</span>, only: [<span class="str">"read"</span>]
 <span class="kw">end</span>
 <span class="cmt"># 0 :sandbox → 1 :strict → 2 :standard → 3 :permissive → 4 :danger</span></pre>
     </div>
@@ -443,9 +443,9 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   c.security = <span class="str">:standard</span>            <span class="cmt"># or c.security = 2</span>
 
   <span class="cmt"># Fine-grained overrides</span>
-  c.security_policy.allow_receiver <span class="str">"File"</span>, only: %w[read exist?]
-  c.security_policy.block_receiver <span class="str">"Net::HTTP"</span>
-  c.security_policy.block_method <span class="str">"puts"</span>
+  c.security.allow_receiver <span class="str">"File"</span>, only: %w[read exist?]
+  c.security.block_receiver <span class="str">"Net::HTTP"</span>
+  c.security.block_method <span class="str">"puts"</span>
 <span class="kw">end</span></pre>
 </section>
 

@@ -16,7 +16,7 @@ module Mana
                   :namespace, :memory_store, :memory_path,
                   :context_window, :memory_pressure, :memory_keep_recent,
                   :compact_model, :on_compact
-    attr_reader :timeout, :security_policy
+    attr_reader :timeout
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
@@ -31,11 +31,11 @@ module Mana
       @api_key = ENV["ANTHROPIC_API_KEY"] || ENV["OPENAI_API_KEY"]
       @max_iterations = 50
       @base_url = ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
-      @timeout = (ENV["MANA_TIMEOUT"] || 120).to_i
+      self.timeout = (ENV["MANA_TIMEOUT"] || 120).to_i
       @verbose = %w[1 true yes].include?(ENV["MANA_VERBOSE"]&.downcase)
       @backend = ENV["MANA_BACKEND"]&.to_sym
       sec = ENV["MANA_SECURITY"]
-      @security_policy = SecurityPolicy.new(sec ? sec.to_sym : :standard)
+      @security = SecurityPolicy.new(sec ? sec.to_sym : :standard)
       @namespace = nil
       @memory_store = nil
       @memory_path = nil
@@ -55,15 +55,18 @@ module Mana
       @timeout = value
     end
 
+    # Read the current security policy
+    def security
+      @security
+    end
+
     # Accept Symbol (:strict), Integer (1), or SecurityPolicy instance
     def security=(value)
       case value
       when SecurityPolicy
-        # Use the provided policy instance directly
-        @security_policy = value
+        @security = value
       when Symbol, Integer
-        # Create a new policy from preset name or numeric level
-        @security_policy = SecurityPolicy.new(value)
+        @security = SecurityPolicy.new(value)
       else
         raise ArgumentError, "security must be a Symbol, Integer, or SecurityPolicy, got #{value.class}"
       end

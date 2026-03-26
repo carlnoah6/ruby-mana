@@ -138,25 +138,25 @@ RSpec.describe Mana::SecurityPolicy do
     before { Mana.reset! }
 
     it "defaults to standard" do
-      expect(Mana.config.security_policy.preset).to eq(:standard)
+      expect(Mana.config.security.preset).to eq(:standard)
     end
 
     it "sets by symbol" do
       Mana.configure { |c| c.security = :permissive }
-      expect(Mana.config.security_policy.preset).to eq(:permissive)
-      expect(Mana.config.security_policy.level).to eq(3)
+      expect(Mana.config.security.preset).to eq(:permissive)
+      expect(Mana.config.security.level).to eq(3)
     end
 
     it "sets by integer" do
       Mana.configure { |c| c.security = 0 }
-      expect(Mana.config.security_policy.preset).to eq(:sandbox)
+      expect(Mana.config.security.preset).to eq(:sandbox)
     end
 
     it "sets by policy instance" do
       policy = described_class.new(:standard) { |p| p.allow_receiver "File", only: %w[read] }
       Mana.configure { |c| c.security = policy }
-      expect(Mana.config.security_policy.preset).to eq(:standard)
-      expect(Mana.config.security_policy.receiver_call_blocked?("File", "read")).to be false
+      expect(Mana.config.security.preset).to eq(:standard)
+      expect(Mana.config.security.receiver_call_blocked?("File", "read")).to be false
     end
   end
 

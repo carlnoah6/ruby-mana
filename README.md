@@ -292,9 +292,9 @@ Fine-grained overrides:
 ```ruby
 Mana.configure do |c|
   c.security = :strict
-  c.security_policy.allow_receiver "File", only: %w[read exist?]
-  c.security_policy.block_method "puts"
-  c.security_policy.block_receiver "Net::HTTP"
+  c.security.allow_receiver "File", only: %w[read exist?]
+  c.security.block_method "puts"
+  c.security.block_receiver "Net::HTTP"
 end
 ```
 

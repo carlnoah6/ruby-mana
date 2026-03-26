@@ -140,10 +140,10 @@ RSpec.describe Mana::Config do
       expect(c.timeout).to eq(30)
     end
 
-    it "MANA_SECURITY sets security_policy preset" do
+    it "MANA_SECURITY sets security preset" do
       ENV["MANA_SECURITY"] = "strict"
       c = described_class.new
-      expect(c.security_policy.preset).to eq(:strict)
+      expect(c.security.preset).to eq(:strict)
     end
   end
 
