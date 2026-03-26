@@ -51,11 +51,12 @@ module Mana
 
         # Cache filename based on source file + method name
         source_file = original.source_location&.first
-        prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16]
+        prompt_hash = prompt ? Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16] : nil
         cache_path = cache_file_path(method_name, owner, source_file: source_file)
 
-        # Load from cache if file exists and prompt hash matches (fast path)
-        if File.exist?(cache_path)
+        # Load from cache if: prompt was extractable (real file, not IRB/eval),
+        # cache file exists, and prompt hash matches
+        if prompt_hash && File.exist?(cache_path)
           first_line = File.open(cache_path, &:readline) rescue ""
           if first_line.include?(prompt_hash)
             # Cache is valid — load the generated code and define the method immediately
