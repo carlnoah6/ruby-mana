@@ -416,7 +416,12 @@ module Mana
         value = input["value"]
         write_local(var_name, value)
         @written_vars[var_name] = value
-        vlog("   ✅ #{var_name} = #{value.inspect}")
+        if value.is_a?(String) && value.include?("\n")
+          vlog("   ✅ #{var_name} =")
+          vlog_code(value)
+        else
+          vlog("   ✅ #{var_name} = #{value.inspect}")
+        end
         "ok: #{var_name} = #{value.inspect}"
 
       when "read_attr"
@@ -504,7 +509,13 @@ module Mana
 
       when "done"
         # Signal task completion; the result becomes the return value
-        vlog("🏁 Done: #{input['result'].inspect}")
+        done_val = input["result"]
+        if done_val.is_a?(String) && done_val.include?("\n")
+          vlog("🏁 Done:")
+          vlog_code(done_val)
+        else
+          vlog("🏁 Done: #{done_val.inspect}")
+        end
         vlog("═" * 60)
         input["result"].to_s
 
@@ -620,7 +631,7 @@ module Mana
         case type
         when "text"
           text = block[:text] || block["text"]
-          vlog("💬 #{text}")
+          vlog("💬 #{text}") if text
         when "tool_use"
           name = block[:name] || block["name"]
           input = block[:input] || block["input"]
@@ -635,6 +646,26 @@ module Mana
       return unless @config.verbose
 
       $stderr.puts "\e[2m[mana] #{msg}\e[0m"
+    end
+
+    # Log a code block with Ruby syntax highlighting to stderr
+    def vlog_code(code)
+      return unless @config.verbose
+
+      highlighted = highlight_ruby(code)
+      highlighted.each_line do |line|
+        $stderr.puts "\e[2m[mana]\e[0m   #{line.rstrip}"
+      end
+    end
+
+    # Minimal Ruby syntax highlighter using ANSI escape codes
+    def highlight_ruby(code)
+      code
+        .gsub(/\b(def|end|do|if|elsif|else|unless|case|when|class|module|return|require|include|raise|begin|rescue|ensure|yield|while|until|for|break|next|nil|true|false|self)\b/) { "\e[35m#{$1}\e[0m" }  # keywords → magenta
+        .gsub(/(["'])(?:(?=(\\?))\2.)*?\1/) { "\e[32m#{$&}\e[0m" }  # strings → green
+        .gsub(/(#[^\n]*)/) { "\e[2m#{$1}\e[0m" }  # comments → dim
+        .gsub(/\b(\d+(?:\.\d+)?)\b/) { "\e[33m#{$1}\e[0m" }  # numbers → yellow
+        .gsub(/(:[\w]+)/) { "\e[36m#{$1}\e[0m" }  # symbols → cyan
     end
 
     # Extract tool_use blocks from the LLM response content array
