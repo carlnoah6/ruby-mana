@@ -121,7 +121,7 @@
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
   <div class="badges">
-    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.5</span>
+    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.6</span>
     <span class="badge">Ruby 3.3+ / 4.0</span>
     <span class="badge">Multi-LLM</span>
     <span class="badge">Security Levels</span>
@@ -179,11 +179,11 @@ puts report  <span class="cmt"># each nested call gets its own context</span></p
     </div>
     <div class="slide">
 <pre><span class="cmt"># Test mode — no API calls needed</span>
-<span class="kw">require</span> <span class="str">"mana"</span>
-
-mock_prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
-mock_prompt(<span class="str">/translate/</span>) { |p| { output: <span class="str">"hola"</span> } }
-<span class="cmt"># ~"..." calls match stubs, never hit the API</span></pre>
+Mana.mock <span class="kw">do</span>
+  prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
+  <span class="ms">~"analyze &lt;code&gt;, store in &lt;bugs&gt; and &lt;score&gt;"</span>
+<span class="kw">end</span>
+<span class="cmt"># bugs == ["XSS"], score == 8.5 — zero API calls</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># Multi-LLM — Anthropic, OpenAI, Ollama, and more</span>

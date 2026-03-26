@@ -152,6 +152,8 @@ module Mana
         messages.pop
       end
 
+      # Track where we started in messages — rollback on failure
+      messages_start_size = messages.size
       messages << { role: "user", content: prompt }
 
       iterations = 0
@@ -218,6 +220,13 @@ module Mana
         # No writes — return the done() result
         done_result
       end
+    rescue => e
+      # Rollback: remove messages added during this failed call so they don't
+      # pollute short-term memory for subsequent prompts
+      if memory && messages.size > messages_start_size
+        messages.slice!(messages_start_size..)
+      end
+      raise e
     ensure
       # Restore outer memory when exiting a nested call
       if nested && !@incognito
@@ -441,7 +450,12 @@ module Mana
             raise NameError, "'#{first_method}' is blocked by security policy"
           end
 
-          # Resolve the receiver constant and call the first method with args
+          # Validate receiver is a simple constant name (e.g. "Time", "File", "Math")
+          # NOT an expression like "ENV['HOME']" which could bypass security policy
+          unless receiver_name.match?(/\A[A-Z][A-Za-z0-9_]*(::[A-Z][A-Za-z0-9_]*)*\z/)
+            raise NameError, "'#{receiver_name}' is not a valid constant name"
+          end
+
           begin
             receiver = @binding.eval(receiver_name)
           rescue => e
@@ -528,19 +542,29 @@ module Mana
       end
     end
 
-    # Write a value into the caller's binding, with Ruby 4.0+ singleton method fallback
+    # Write a value into the caller's binding, with Ruby 4.0+ singleton method fallback.
+    # Only defines a singleton method when the variable doesn't already exist as a local
+    # AND the receiver doesn't already have a real method with that name.
     def write_local(name, value)
       validate_name!(name)
       sym = name.to_sym
 
+      # Check if the variable already exists before setting
+      existed = @binding.local_variable_defined?(sym)
       @binding.local_variable_set(sym, value)
 
       # Ruby 4.0+: local_variable_set can no longer create new locals visible
-      # in the caller's scope. Always define a singleton method as fallback.
-      receiver = @binding.eval("self")
-      old_verbose, $VERBOSE = $VERBOSE, nil
-      receiver.define_singleton_method(sym) { value }
-      $VERBOSE = old_verbose
+      # in the caller's scope. Define a singleton method ONLY for new variables
+      # that don't conflict with existing methods on the receiver.
+      unless existed
+        receiver = @binding.eval("self")
+        # Don't overwrite real instance methods — only add if no method exists
+        unless receiver.class.method_defined?(sym) || receiver.class.private_method_defined?(sym)
+          old_verbose, $VERBOSE = $VERBOSE, nil
+          receiver.define_singleton_method(sym) { value }
+          $VERBOSE = old_verbose
+        end
+      end
     end
 
     # Find the user's source file by walking up the call stack.

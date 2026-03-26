@@ -381,6 +381,27 @@ RSpec.describe Mana::Engine do
       expect(result).to eq("ok")
     end
 
+    it "blocks expression injection in receiver (e.g. ENV['HOME'].to_s)" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "ENV['HOME'].to_s" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      # Should not crash — error returned to LLM, ENV not leaked
+      expect { Mana::Engine.run("get env", b) }.not_to raise_error
+    end
+
+    it "blocks arbitrary eval in receiver name" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "Kernel.system('ls')" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      expect { Mana::Engine.run("run command", b) }.not_to raise_error
+    end
+
     it "allows chained calls like Time.now.to_s" do
       stub_anthropic_sequence(
         [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "Time.now.to_s" } }],

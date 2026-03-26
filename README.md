@@ -224,7 +224,7 @@ Mana.configure do |c|
 
   # Memory settings
   c.namespace = "my-project"      # nil = auto-detect from git/pwd
-  c.context_window = 200_000      # nil = auto-detect from model
+  c.context_window = 128_000      # default: 128_000
   c.memory_pressure = 0.7         # compact when tokens exceed 70% of context window
   c.memory_keep_recent = 4        # keep last 4 rounds during compaction
   c.compact_model = nil           # nil = use main model for compaction
