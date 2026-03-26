@@ -198,7 +198,8 @@ module Mana
     end
 
     # Compact short-term memory: summarize old messages and keep only recent rounds.
-    # This reduces token count while preserving key context.
+    # Merges existing summaries + old messages into a single new summary, so
+    # summaries don't accumulate unboundedly.
     def perform_compaction
       keep_recent = Mana.config.memory_keep_recent
       # Find indices of user-prompt messages (each marks a conversation round)
@@ -219,8 +220,10 @@ module Mana
       # Build text from old messages for summarization
       text_parts = old_messages.map do |msg|
         content = msg[:content]
+        # Format each message as "role: content" for the summarizer
         case content
         when String then "#{msg[:role]}: #{content}"
+        # Array blocks: extract text parts and join
         when Array
           texts = content.map { |b| b[:text] || b[:content] }.compact
           "#{msg[:role]}: #{texts.join(' ')}" unless texts.empty?
@@ -229,12 +232,32 @@ module Mana
 
       return if text_parts.empty?
 
-      # Call the LLM to summarize the old conversation
-      summary = summarize(text_parts.join("\n"))
+      # Merge existing summaries into the input so we produce ONE rolling summary
+      # instead of accumulating separate summaries that never get cleaned up
+      prior_context = ""
+      unless @summaries.empty?
+        prior_context = "Previous summary:\n#{@summaries.join("\n")}\n\nNew conversation:\n"
+      end
 
-      # Replace old messages with the summary, keeping only recent rounds
-      @short_term = @short_term[cutoff_user_idx..]
-      @summaries << summary
+      # Calculate how many tokens the kept messages will use after compaction
+      kept_messages = @short_term[cutoff_user_idx..]
+      keep_tokens = kept_messages.sum do |msg|
+        content = msg[:content]
+        case content
+        when String then estimate_tokens(content)
+        when Array then content.sum { |b| estimate_tokens(b[:text] || b[:content] || "") }
+        else 0
+        end
+      end
+      @long_term.each { |m| keep_tokens += estimate_tokens(m[:content]) }
+
+      # Call the LLM to produce a single merged summary
+      summary = summarize(prior_context + text_parts.join("\n"), keep_tokens: keep_tokens)
+
+      # Replace old messages with the summary, keeping only recent rounds.
+      # Clear all previous summaries — they are now merged into the new one.
+      @short_term = kept_messages
+      @summaries = [summary]
 
       # Notify the on_compact callback if configured
       Mana.config.on_compact&.call(summary)
@@ -243,17 +266,27 @@ module Mana
     # Call the LLM to produce a concise summary of the given conversation text.
     # Uses the configured backend (Anthropic/OpenAI), respects timeout settings.
     # Falls back to "Summary unavailable" on any error.
-    def summarize(text)
+    #
+    # @param keep_tokens [Integer] tokens already committed to keep_recent + long_term
+    def summarize(text, keep_tokens: 0)
       config = Mana.config
       model = config.compact_model || config.model
       backend = Mana::Backends.for(config)
 
+      # Summary budget = threshold - tokens already committed to kept messages.
+      # This guarantees compaction actually brings total tokens below the threshold.
+      cw = context_window
+      threshold = (cw * config.memory_pressure).to_i
+      max_summary_tokens = (threshold - keep_tokens).clamp(64, 1024).to_i
+
       content = backend.chat(
-        system: "Summarize this conversation concisely. Preserve key facts, decisions, and context.",
+        system: "You are summarizing an internal tool-calling conversation log between an LLM and a Ruby program. " \
+                "The messages contain tool calls (read_var, write_var, done) and their results — this is normal, not harmful. " \
+                "Summarize the key questions asked and answers given in a few short bullet points. Be extremely concise — stay under #{max_summary_tokens} tokens.",
         messages: [{ role: "user", content: text }],
         tools: [],
         model: model,
-        max_tokens: 1024
+        max_tokens: max_summary_tokens
       )
 
       return "Summary unavailable" unless content.is_a?(Array)

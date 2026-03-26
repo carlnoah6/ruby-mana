@@ -11,8 +11,19 @@
 
 require "mana"
 
+LOG_FILE = File.expand_path("compaction_test.log", __dir__)
+$log_file = File.open(LOG_FILE, "w")
+$log_file.sync = true
+
+at_exit do
+  $log_file.close
+  puts "Log written to: #{LOG_FILE}"
+end
+
 def log(msg)
-  puts "[#{Time.now.strftime('%H:%M:%S')}] #{msg}"
+  line = "[#{Time.now.strftime('%H:%M:%S')}] #{msg}"
+  puts line
+  $log_file.puts line
 end
 
 def dump_memory(label, memory)
@@ -35,20 +46,20 @@ def dump_memory(label, memory)
 
   # Print summaries
   memory.summaries.each_with_index do |s, i|
-    log "#{label}   summary[#{i}]: #{s[0, 120]}"
+    log "#{label}   summary[#{i}]: #{s}"
   end
 end
 
 # --- Configuration ---
 
 Mana.configure do |c|
-  c.context_window = 200       # Extremely small — each round ~36 tokens, threshold = 60
-  c.memory_pressure = 0.3      # Trigger at 30% usage (60 tokens)
+  c.context_window = 500       # Small but realistic ratio: short prompts ~20t each
+  c.memory_pressure = 0.5      # Trigger at 50% (250 tokens) — ~8 rounds to trigger
   c.memory_keep_recent = 2     # Keep only 2 recent rounds
 
   c.on_compact = ->(summary) do
     log "COMPACTION COMPLETE"
-    log "  Summary: #{summary[0, 200]}"
+    log "  Summary: #{summary}"
   end
 end
 
@@ -60,14 +71,23 @@ log "  memory_keep_recent=#{Mana.config.memory_keep_recent}"
 log "  model=#{Mana.config.model}"
 log "=" * 60
 
-# --- Prompts designed to generate enough tokens ---
+# --- Short, realistic prompts (like real usage) ---
+# Each round generates ~20-40 tokens in short_term.
+# With context_window=500 and pressure=0.5, compaction triggers around round 8.
 
 prompts = [
-  "What is 2 + 2? Store the answer in <result>",
-  "What is the capital of France? Store in <result>",
-  "List 5 prime numbers under 50 and explain why each is prime. Store the list in <result>",
-  "What color is the sky at sunrise, noon, and sunset? Give a detailed answer. Store in <result>",
-  "What is 10 * 7? Store the answer in <result>",
+  "What is 2 + 2? Store in <result>",
+  "Capital of France? Store in <result>",
+  "What is 7 * 8? Store in <result>",
+  "Largest planet in our solar system? Store in <result>",
+  "What is 100 / 4? Store in <result>",
+  "Capital of Japan? Store in <result>",
+  "What is 15 + 27? Store in <result>",
+  "Who wrote Romeo and Juliet? Store in <result>",
+  "What is 9 * 9? Store in <result>",
+  "Capital of Germany? Store in <result>",
+  "What is 144 / 12? Store in <result>",
+  "Fastest land animal? Store in <result>",
 ]
 
 prompts.each_with_index do |prompt, i|

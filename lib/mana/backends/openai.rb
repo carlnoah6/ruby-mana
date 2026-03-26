@@ -200,5 +200,25 @@ module Mana
         blocks
       end
     end
+
+    # --- Backend resolution ---
+
+    # Model name patterns for auto-detection
+    ANTHROPIC_PATTERNS = /^(claude-)/i
+
+    # Resolve a backend instance from configuration.
+    # Priority: pre-built instance > explicit name > auto-detect from model name.
+    def self.for(config)
+      return config.backend if config.backend.is_a?(Anthropic) || config.backend.is_a?(OpenAI)
+
+      config.validate!
+
+      case config.backend&.to_s
+      when "openai" then OpenAI.new(config)
+      when "anthropic" then Anthropic.new(config)
+      else
+        config.model.match?(ANTHROPIC_PATTERNS) ? Anthropic.new(config) : OpenAI.new(config)
+      end
+    end
   end
 end
