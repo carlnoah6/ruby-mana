@@ -43,6 +43,15 @@ module Mana
         compiler = self
         key = registry_key(method_name, owner)
 
+        # Detect method visibility before we replace it
+        visibility = if owner.private_method_defined?(method_name)
+                       :private
+                     elsif owner.protected_method_defined?(method_name)
+                       :protected
+                     else
+                       :public
+                     end
+
         # Read the prompt from the original method body (the ~"..." string)
         prompt = extract_prompt(original)
 
@@ -64,6 +73,7 @@ module Mana
             compiler.registry[key] = generated
             v, $VERBOSE = $VERBOSE, nil
             owner.class_eval(generated, cache_path, 1)
+            owner.send(visibility, method_name) unless visibility == :public
             $VERBOSE = v
             return
           end
@@ -89,11 +99,14 @@ module Mana
           target_owner = owner
           v, $VERBOSE = $VERBOSE, nil
           target_owner.class_eval(generated, cache_path, 1)
+          target_owner.send(visibility, method_name) unless visibility == :public
           $VERBOSE = v
 
           # Call the now-native method (this wrapper never runs again)
           send(method_name, *args, **kwargs, &blk)
         end
+        # Restore original visibility on the wrapper method
+        owner.send(visibility, method_name) unless visibility == :public
         $VERBOSE = old_verbose
       end
 

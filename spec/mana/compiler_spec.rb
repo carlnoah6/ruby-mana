@@ -112,6 +112,62 @@ RSpec.describe Mana::Compiler do
       key = "#{klass}#square"
       expect(described_class.registry[key]).to eq(generated_code)
     end
+
+    it "preserves private visibility" do
+      klass = Class.new do
+        private
+
+        def secret_method(n)
+          ~"return n"
+        end
+      end
+
+      generated_code = "def secret_method(n)\n  n\nend"
+      allow(described_class).to receive(:generate).and_return(generated_code)
+
+      described_class.compile(klass, :secret_method)
+
+      obj = klass.new
+      # Should be private — not callable externally
+      expect { obj.secret_method(5) }.to raise_error(NoMethodError, /private/)
+      # But callable internally via send
+      expect(obj.send(:secret_method, 5)).to eq(5)
+    end
+
+    it "preserves protected visibility" do
+      klass = Class.new do
+        protected
+
+        def protected_method(n)
+          ~"return n"
+        end
+      end
+
+      generated_code = "def protected_method(n)\n  n\nend"
+      allow(described_class).to receive(:generate).and_return(generated_code)
+
+      described_class.compile(klass, :protected_method)
+
+      obj = klass.new
+      expect { obj.protected_method(5) }.to raise_error(NoMethodError, /protected/)
+      expect(obj.send(:protected_method, 5)).to eq(5)
+    end
+
+    it "keeps public methods public" do
+      klass = Class.new do
+        def public_method(n)
+          ~"return n"
+        end
+      end
+
+      generated_code = "def public_method(n)\n  n\nend"
+      allow(described_class).to receive(:generate).and_return(generated_code)
+
+      described_class.compile(klass, :public_method)
+
+      obj = klass.new
+      expect(obj.public_method(5)).to eq(5)
+    end
   end
 
   describe "cache hit / miss" do
