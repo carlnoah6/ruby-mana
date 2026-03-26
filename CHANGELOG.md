@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.7] - 2026-03-27
+
+### Security
+- **call_func receiver validation** — blocks expression injection (e.g. `ENV['HOME'].to_s`) by requiring simple constant names only
+- **write_var no longer pollutes receiver** — singleton method fallback only for new variables that don't conflict with existing methods
+
+### Fixed
+- Failed LLM calls no longer pollute short-term memory (messages rolled back on exception)
+- Logger extracted from engine.rb (726→639 lines)
+- Compiler cache includes sibling function signatures (dependency changes invalidate cache)
+- Summarize error handling: ConfigError propagates, others log
+- OpenAI convert_tools filters $schema key
+- docs/index.html version badge, mock example, context_window default
+
+### Added
+- `Backends::Base` class with shared HTTP infrastructure
+- `Logger` module extracted from Engine
+- Tests for read_attr/write_attr error paths, nested error recovery, mixin visibility
+- Examples: yard_comments.rb, testing.rb
+
 ## [0.5.6] - 2026-03-26
 
 ### Added
