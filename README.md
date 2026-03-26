@@ -395,22 +395,38 @@ require "mana/test"
 RSpec.describe MyApp do
   include Mana::TestHelpers
 
-  it "analyzes code" do
+  it "writes variables into caller scope" do
+    # Each key becomes a local variable via write_var
     mock_prompt "analyze", bugs: ["XSS"], score: 8.5
 
-    result = MyApp.analyze("user_input")
-    expect(result[:bugs]).to include("XSS")
+    ~"analyze <code> and store bugs in <bugs> and score in <score>"
+    expect(bugs).to eq(["XSS"])
+    expect(score).to eq(8.5)
   end
 
-  it "translates with dynamic response" do
-    mock_prompt(/translate.*to\s+\w+/) do |prompt|
+  it "returns a value via _return" do
+    mock_prompt "translate", _return: "你好"
+
+    result = ~"translate hello to Chinese"
+    expect(result).to eq("你好")
+  end
+
+  it "uses block for dynamic responses" do
+    mock_prompt(/translate/) do |prompt|
       { output: prompt.include?("Chinese") ? "你好" : "hello" }
     end
 
-    expect(MyApp.translate("hi", "Chinese")).to eq("你好")
+    ~"translate hi to Chinese, store in <output>"
+    expect(output).to eq("你好")
   end
 end
 ```
+
+**How mock works:**
+- `mock_prompt(pattern, key: value, ...)` — each key/value pair is written as a local variable (simulates `write_var`)
+- `_return:` — special key, becomes the return value of `~"..."`
+- Block form — receives the prompt text, returns a hash of variables to write
+- Pattern matching: `String` uses `include?`, `Regexp` uses `match?`
 
 Block mode for inline tests:
 
