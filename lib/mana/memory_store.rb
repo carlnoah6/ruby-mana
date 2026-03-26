@@ -23,6 +23,7 @@ module Mana
     end
   end
 
+
   # Default file-based memory store. Persists memories as JSON files.
   # Storage path resolution: explicit base_path > config.memory_path > XDG_DATA_HOME > OS default
   class FileStore < MemoryStore
