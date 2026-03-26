@@ -51,15 +51,20 @@ module Mana
 
         # Cache filename based on source file + method name
         source_file = original.source_location&.first
-        prompt_hash = prompt ? Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16] : nil
+        # When prompt is extractable (real file), hash includes prompt content for auto-invalidation.
+        # When not extractable (IRB/eval), use method_name + params only — cache works but
+        # won't auto-invalidate on prompt change. Use Mana::Compiler.clear! to force regeneration.
+        if prompt
+          prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}:#{prompt}")[0, 16]
+        else
+          prompt_hash = Digest::SHA256.hexdigest("#{method_name}:#{params_desc}")[0, 16]
+        end
         cache_path = cache_file_path(method_name, owner, source_file: source_file)
 
-        # Load from cache if: prompt was extractable (real file, not IRB/eval),
-        # cache file exists, and prompt hash matches
-        if prompt_hash && File.exist?(cache_path)
+        # Load from cache if file exists and prompt hash matches
+        if File.exist?(cache_path)
           first_line = File.open(cache_path, &:readline) rescue ""
           if first_line.include?(prompt_hash)
-            # Cache is valid — load the generated code and define the method immediately
             cached = File.read(cache_path)
             generated = cached.lines.reject { |l| l.start_with?("#") }.join.strip
             compiler.registry[key] = generated
