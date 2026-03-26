@@ -153,6 +153,31 @@ RSpec.describe Mana::Engine do
       expect { Mana::Engine.run("try injection", b) }.not_to raise_error
     end
 
+    it "handles read_attr on nonexistent object gracefully" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "read_attr", input: { "obj" => "nonexistent_obj", "attr" => "name" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      b = binding
+      # Should not crash — error returned to LLM as tool_result
+      expect { Mana::Engine.run("read nonexistent", b) }.not_to raise_error
+    end
+
+    it "handles write_attr on nonexistent attribute gracefully" do
+      klass = Struct.new(:name, keyword_init: true)
+      obj = klass.new(name: "test")
+
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "write_attr", input: { "obj" => "item", "attr" => "nonexistent_field", "value" => "x" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+      )
+
+      item = obj # rubocop:disable Lint/UselessAssignment
+      b = binding
+      expect { Mana::Engine.run("write nonexistent attr", b) }.not_to raise_error
+    end
+
     it "handles multiple tool calls in one response" do
       stub_request(:post, "https://api.anthropic.com/v1/messages")
         .to_return(
