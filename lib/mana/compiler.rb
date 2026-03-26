@@ -211,9 +211,10 @@ module Mana
           when :key then "#{name}: nil"        # optional keyword
           when :keyrest then "**#{name}"       # double splat
           when :block then "&#{name}"          # block parameter
-          else name.to_s
+          when :nokey then nil                 # **nil — skip (no keywords accepted)
+          else name&.to_s
           end
-        end.join(", ")
+        end.compact.join(", ")
       end
 
       def underscore(str)

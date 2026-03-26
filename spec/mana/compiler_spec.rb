@@ -258,5 +258,16 @@ RSpec.describe Mana::Compiler do
       result = described_class.send(:describe_params, method)
       expect(result).to eq("")
     end
+
+    it "handles **nil (nokey) parameter" do
+      klass = Class.new do
+        def no_keywords(a, **nil); end
+      end
+
+      method = klass.instance_method(:no_keywords)
+      result = described_class.send(:describe_params, method)
+      expect(result).to eq("a")
+      expect(result).not_to include("nil")
+    end
   end
 end
