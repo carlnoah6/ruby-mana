@@ -182,9 +182,22 @@ module Mana
       @default_store ||= FileStore.new
     end
 
-    # Resolve namespace for memory isolation
     def namespace
-      Namespace.detect
+      ns = Mana.config.namespace
+      return ns if ns && !ns.to_s.empty?
+
+      dir = `git rev-parse --show-toplevel 2>/dev/null`.strip
+      return File.basename(dir) unless dir.empty?
+
+      d = Dir.pwd
+      loop do
+        return File.basename(d) if File.exist?(File.join(d, "Gemfile"))
+        parent = File.dirname(d)
+        break if parent == d
+        d = parent
+      end
+
+      File.basename(Dir.pwd)
     end
 
     # Load long-term memories from the persistent store on initialization.
@@ -271,13 +284,14 @@ module Mana
     def summarize(text, keep_tokens: 0)
       config = Mana.config
       model = config.compact_model || config.model
-      backend = Mana::Backends.for(config)
+      backend = Mana::Backends::Base.for(config)
 
-      # Summary budget = threshold - tokens already committed to kept messages.
-      # This guarantees compaction actually brings total tokens below the threshold.
+      # Summary budget = half of (threshold - kept tokens).
+      # Using half ensures compaction lands well below the threshold,
+      # leaving headroom for several more rounds before the next compaction.
       cw = context_window
       threshold = (cw * config.memory_pressure).to_i
-      max_summary_tokens = (threshold - keep_tokens).clamp(64, 1024).to_i
+      max_summary_tokens = ((threshold - keep_tokens) * 0.5).clamp(64, 1024).to_i
 
       content = backend.chat(
         system: "You are summarizing an internal tool-calling conversation log between an LLM and a Ruby program. " \

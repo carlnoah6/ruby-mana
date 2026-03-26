@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe Mana::Backends do
+RSpec.describe Mana::Backends::Base do
   describe ".for" do
     # Helper to create a config with a dummy API key for routing tests
     def config_with(model:, backend: nil)

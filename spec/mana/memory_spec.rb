@@ -117,7 +117,7 @@ RSpec.describe Mana::Memory do
 
     it "loads persisted data on initialization" do
       store = Mana.config.memory_store
-      store.write(Mana::Namespace.detect, [
+      store.write(File.basename(`git rev-parse --show-toplevel 2>/dev/null`.strip), [
         { id: 1, content: "test fact", created_at: "2026-01-01T00:00:00+00:00" }
       ])
 
@@ -154,7 +154,7 @@ RSpec.describe Mana::Memory do
       memory.remember("persisted fact")
 
       store = Mana.config.memory_store
-      data = store.read(Mana::Namespace.detect)
+      data = store.read(File.basename(`git rev-parse --show-toplevel 2>/dev/null`.strip))
       expect(data.size).to eq(1)
       expect(data.first[:content]).to eq("persisted fact")
     end
@@ -184,7 +184,7 @@ RSpec.describe Mana::Memory do
       memory.forget(id: 1)
 
       store = Mana.config.memory_store
-      data = store.read(Mana::Namespace.detect)
+      data = store.read(File.basename(`git rev-parse --show-toplevel 2>/dev/null`.strip))
       expect(data).to be_empty
     end
   end
@@ -224,7 +224,7 @@ RSpec.describe Mana::Memory do
       expect(memory.short_term.size).to eq(1)
 
       store = Mana.config.memory_store
-      data = store.read(Mana::Namespace.detect)
+      data = store.read(File.basename(`git rev-parse --show-toplevel 2>/dev/null`.strip))
       expect(data).to be_empty
     end
   end
@@ -429,7 +429,7 @@ RSpec.describe Mana::Memory do
     it "returns 'Summary unavailable' when backend fails during compaction" do
       memory = described_class.new
       # Stub the backend to raise an error
-      allow(Mana::Backends).to receive(:for).and_raise(Mana::LLMError, "timeout")
+      allow(Mana::Backends::Base).to receive(:for).and_raise(Mana::LLMError, "timeout")
 
       result = memory.send(:summarize, "some conversation text")
       expect(result).to eq("Summary unavailable")
@@ -440,6 +440,68 @@ RSpec.describe Mana::Memory do
       memory.remember("a fact")
       expect { memory.forget(id: 999) }.not_to raise_error
       expect(memory.long_term.size).to eq(1)
+    end
+  end
+
+  describe "compaction summary merging" do
+    it "merges old summaries into a single new summary instead of accumulating" do
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: JSON.generate({ content: [{ type: "text", text: "Merged summary" }] })
+        )
+
+      memory = described_class.new
+      # Seed with an existing summary
+      memory.summaries << "Old summary from previous compaction"
+
+      10.times do |i|
+        memory.short_term << { role: "user", content: "Message #{i} " + ("x" * 200) }
+        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
+      end
+
+      Mana.config.memory_pressure = 0.0001
+      Mana.config.memory_keep_recent = 2
+      memory.compact!
+
+      # Should have exactly 1 summary, not 2 (old one was merged)
+      expect(memory.summaries.size).to eq(1)
+      expect(memory.summaries.first).to eq("Merged summary")
+    end
+  end
+
+  describe "compaction summary budget" do
+    it "calculates max_summary_tokens from threshold minus keep_tokens" do
+      memory = described_class.new
+
+      Mana.config.context_window = 1000
+      Mana.config.memory_pressure = 0.5  # threshold = 500
+
+      # Add messages so keep_recent has ~100 tokens
+      8.times do |i|
+        memory.short_term << { role: "user", content: "Msg #{i} " + ("y" * 100) }
+        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Resp #{i}" }] }
+      end
+
+      Mana.config.memory_keep_recent = 2
+
+      # Capture the max_tokens passed to the backend
+      captured_max_tokens = nil
+      fake_backend = double("backend")
+      allow(Mana::Backends::Base).to receive(:for).and_return(fake_backend)
+      allow(fake_backend).to receive(:chat) do |**kwargs|
+        captured_max_tokens = kwargs[:max_tokens]
+        [{ type: "text", text: "Budget summary" }]
+      end
+
+      memory.compact!
+
+      # Budget should be roughly half of (threshold - keep_tokens), clamped 64..1024
+      expect(captured_max_tokens).to be >= 64
+      expect(captured_max_tokens).to be <= 1024
+      # With threshold=500 and keep_tokens ~60, budget ≈ (500-60)*0.5 ≈ 220
+      expect(captured_max_tokens).to be < 500  # definitely not the full threshold
     end
   end
 end

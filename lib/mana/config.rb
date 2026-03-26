@@ -20,7 +20,6 @@ module Mana
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
-    ANTHROPIC_MODEL_PATTERN = /^claude-/i
 
     # All config options can be set via environment variables:
     #   MANA_MODEL, MANA_VERBOSE, MANA_TIMEOUT, MANA_BACKEND
@@ -110,7 +109,7 @@ module Mana
       when "anthropic" then true
       when "openai" then false
       # No explicit backend; auto-detect from model name pattern
-      else @model.match?(ANTHROPIC_MODEL_PATTERN)
+      else @model.match?(Backends::Base::ANTHROPIC_PATTERN)
       end
     end
   end

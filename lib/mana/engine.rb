@@ -596,7 +596,7 @@ module Mana
     def llm_call(system, messages)
       vlog("\n#{"─" * 60}")
       vlog("🔄 LLM call ##{@_iteration} → #{@config.model}")
-      backend = Backends.for(@config)
+      backend = Backends::Base.for(@config)
       result = backend.chat(
         system: system,
         messages: messages,
