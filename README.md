@@ -124,8 +124,11 @@ mana def fibonacci(n)
   ~"return an array of the first n Fibonacci numbers"
 end
 
-fibonacci(10)  # first call → LLM generates code → cached → executed
-fibonacci(20)  # pure Ruby from .mana_cache/
+fibonacci(10)  # first call → LLM generates code → cached
+fibonacci(20)  # second call → loads from cache, no LLM, no waiting
+
+# View the generated source
+puts Mana.source(:fibonacci)
 
 # Works in classes too
 class Converter
@@ -135,6 +138,8 @@ class Converter
     ~"convert Celsius to Fahrenheit"
   end
 end
+
+puts Mana.source(:celsius_to_fahrenheit, owner: Converter)
 ```
 
 Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to skip LLM on CI).
