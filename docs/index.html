@@ -368,31 +368,42 @@ puts Mana.source(<span class="str">:slugify</span>)     <span class="cmt"># view
   <h2>Security policy</h2>
   <p class="lead">5 levels control what the LLM can call. Higher number = more permissions.</p>
 
-  <div style="margin-bottom:24px">
-    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
-      <div class="sn" style="background:var(--bd);color:var(--dim)">0</div>
-      <div><strong><code>:sandbox</code></strong><br><span style="color:var(--gr);font-size:.85rem">variables, user functions</span></div>
-      <div><span style="color:#f85149;font-size:.85rem">everything else blocked</span></div>
+  <div style="margin-bottom:24px;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+    <!-- Header -->
+    <div style="background:var(--bd);padding:10px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:.85rem;font-weight:700;color:var(--dim)">
+      <div>Level</div>
+      <div style="color:var(--gr)">Allowed</div>
+      <div style="color:#f85149">Blocked</div>
     </div>
-    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
-      <div class="sn" style="background:var(--bd);color:var(--dim)">1</div>
-      <div><strong><code>:strict</code></strong><br><span style="color:var(--gr);font-size:.85rem">+ <code>Time</code>, <code>Date</code>, <code>Math</code></span></div>
-      <div><span style="color:#f85149;font-size:.85rem">File, Dir, IO, network, eval, exec</span></div>
+    <!-- Level 0 -->
+    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd)">
+      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">0</span><strong><code>:sandbox</code></strong></div>
+      <div style="color:var(--gr)">Variables, user functions</div>
+      <div style="color:#f85149">Everything else</div>
     </div>
-    <div style="background:var(--sf);border:2px solid var(--ac);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
-      <div class="sn">2</div>
-      <div><strong style="color:var(--ac)"><code>:standard</code></strong> <span style="font-size:.8rem;color:var(--ac)">(default)</span><br><span style="color:var(--gr);font-size:.85rem">+ <code>File.read</code>, <code>Dir.glob</code></span></div>
-      <div><span style="color:#f85149;font-size:.85rem">File.write, File.delete, network, eval, exec</span></div>
+    <!-- Level 1 -->
+    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd)">
+      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">1</span><strong><code>:strict</code></strong></div>
+      <div style="color:var(--gr)">+ Time, Date, Math</div>
+      <div style="color:#f85149">File, Dir, IO, network, eval, exec</div>
     </div>
-    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
-      <div class="sn" style="background:var(--bd);color:var(--dim)">3</div>
-      <div><strong><code>:permissive</code></strong><br><span style="color:var(--gr);font-size:.85rem">+ write files, network, require</span></div>
-      <div><span style="color:#f85149;font-size:.85rem">eval, exec, fork, spawn</span></div>
+    <!-- Level 2 (default) -->
+    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd);border-left:3px solid var(--ac)">
+      <div><span class="sn" style="display:inline-flex;margin-right:8px">2</span><strong style="color:var(--ac)"><code>:standard</code></strong> <span style="font-size:.75rem;color:var(--ac)">default</span></div>
+      <div style="color:var(--gr)">+ File.read, Dir.glob</div>
+      <div style="color:#f85149">File.write, File.delete, network, eval, exec</div>
     </div>
-    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
-      <div class="sn" style="background:var(--bd);color:var(--dim)">4</div>
-      <div><strong><code>:danger</code></strong><br><span style="color:var(--gr);font-size:.85rem">everything allowed</span></div>
-      <div><span style="color:#f85149;font-size:.85rem">nothing blocked</span></div>
+    <!-- Level 3 -->
+    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd)">
+      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">3</span><strong><code>:permissive</code></strong></div>
+      <div style="color:var(--gr)">+ write files, network, require</div>
+      <div style="color:#f85149">eval, exec, fork, spawn</div>
+    </div>
+    <!-- Level 4 -->
+    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center">
+      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">4</span><strong><code>:danger</code></strong></div>
+      <div style="color:var(--gr)">Everything allowed</div>
+      <div style="color:#f85149">Nothing blocked</div>
     </div>
   </div>
 
