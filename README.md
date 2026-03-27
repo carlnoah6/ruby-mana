@@ -281,41 +281,6 @@ Mana.configure do |c|
 end
 ```
 
-### Multiple LLM backends
-
-Mana supports Anthropic and OpenAI-compatible APIs (including Ollama, DeepSeek, Groq, etc.):
-
-```ruby
-# Anthropic (default for claude-* models)
-Mana.configure do |c|
-  c.api_key = ENV["ANTHROPIC_API_KEY"]
-  c.model = "claude-sonnet-4-6"
-end
-
-# OpenAI
-Mana.configure do |c|
-  c.api_key = ENV["OPENAI_API_KEY"]
-  c.base_url = "https://api.openai.com"
-  c.model = "gpt-4o"
-end
-
-# Ollama (local, no API key needed)
-Mana.configure do |c|
-  c.api_key = "unused"
-  c.base_url = "http://localhost:11434"
-  c.model = "llama3"
-end
-
-# Explicit backend override
-Mana.configure do |c|
-  c.backend = :openai  # force OpenAI format
-  c.base_url = "https://api.groq.com/openai"
-  c.model = "llama-3.3-70b-versatile"
-end
-```
-
-Backend is auto-detected from model name: `claude-*` → Anthropic, everything else → OpenAI.
-
 ### Security policy
 
 Mana restricts what the LLM can call via security levels (higher = more permissions):
