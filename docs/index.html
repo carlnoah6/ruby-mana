@@ -120,13 +120,7 @@
   <h1>ruby-<span class="m">mana</span> 🔮</h1>
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
-  <div class="badges">
-    <span class="badge" style="border-color:var(--gr);color:var(--gr)">v0.5.8</span>
-    <span class="badge">Ruby 3.3+ / 4.0</span>
-    <span class="badge">Multi-LLM</span>
-    <span class="badge">Security Levels</span>
-    <span class="badge">MIT License</span>
-  </div>
+  <p class="sub" style="margin-top:8px;font-size:.95rem;color:var(--dim)">Ruby 3.3+ gem that embeds Claude, GPT, and local LLMs as native language constructs. 5 security levels. MIT licensed.</p>
 
   <div class="carousel" id="heroCarousel">
     <div class="slide active">
@@ -137,17 +131,11 @@ puts result  <span class="cmt"># =&gt; 3.0</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM reads and writes Ruby objects directly</span>
-email.subject = <span class="str">"URGENT: Server down"</span>
+<span class="kw">class</span> Email &lt; Struct.new(<span class="str">:subject</span>, <span class="str">:category</span>, <span class="str">:priority</span>); <span class="kw">end</span>
+email = Email.new(<span class="str">"URGENT: Server down"</span>)
 <span class="ms">~"read &lt;email&gt; subject, set its category and priority"</span>
-email.category  <span class="cmt"># =&gt; "infrastructure"</span></pre>
-    </div>
-    <div class="slide">
-<pre><span class="cmt"># Just define Ruby functions — LLM discovers them</span>
-<span class="cmt"># Query the database</span>
-<span class="kw">def</span> <span class="fn">query_db</span>(sql:, limit: <span class="num">10</span>)
-  DB.execute(sql).first(limit)
-<span class="kw">end</span>
-<span class="ms">~"use query_db to find recent orders, store in &lt;orders&gt;"</span></pre>
+email.category  <span class="cmt"># =&gt; "infrastructure"</span>
+email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM writes the code, Ruby runs it forever</span>
@@ -163,47 +151,6 @@ fibonacci(<span class="num">10</span>)  <span class="cmt"># generated once → c
 <span class="kw">end</span>
 <span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span></pre>
     </div>
-    <div class="slide">
-<pre><span class="cmt"># Memory is automatic — no session blocks needed</span>
-<span class="ms">~"remember: user prefers concise style"</span>
-<span class="ms">~"translate &lt;text&gt;"</span>          <span class="cmt"># remembers the preference</span>
-<span class="ms">~"translate &lt;text2&gt;"</span>         <span class="cmt"># still remembers</span>
-Mana.memory.long_term       <span class="cmt"># =&gt; persists across runs</span></pre>
-    </div>
-    <div class="slide">
-<pre><span class="cmt"># Nested prompts — LLM calling LLM</span>
-lint = ->(<span class="fn">code</span>) { <span class="ms">~"check #{code} for style issues, store in &lt;issues&gt;"</span> }
-
-<span class="ms">~"review &lt;codebase&gt;, call lint for each file, store in &lt;report&gt;"</span>
-puts report  <span class="cmt"># each nested call gets its own context</span></pre>
-    </div>
-    <div class="slide">
-<pre><span class="cmt"># Test mode — no API calls needed</span>
-Mana.mock <span class="kw">do</span>
-  prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
-  <span class="ms">~"analyze &lt;code&gt;, store in &lt;bugs&gt; and &lt;score&gt;"</span>
-<span class="kw">end</span>
-<span class="cmt"># bugs == ["XSS"], score == 8.5 — zero API calls</span></pre>
-    </div>
-    <div class="slide">
-<pre><span class="cmt"># Multi-LLM — Anthropic, OpenAI, Ollama, and more</span>
-Mana.configure <span class="kw">do</span> |c|
-  c.api_key = ENV[<span class="str">"OPENAI_API_KEY"</span>]
-  c.base_url = <span class="str">"https://api.openai.com"</span>
-  c.model = <span class="str">"gpt-4o"</span>
-  c.timeout = <span class="num">60</span>           <span class="cmt"># seconds (default: 120)</span>
-<span class="kw">end</span>
-<span class="cmt"># auto-detects backend from model name</span>
-<span class="cmt"># or use env vars: ANTHROPIC_API_URL / OPENAI_API_URL</span></pre>
-    </div>
-    <div class="slide">
-<pre><span class="cmt"># Security levels — fine-grained control</span>
-Mana.configure <span class="kw">do</span> |c|
-  c.security = <span class="str">:standard</span>  <span class="cmt"># level 2: + read filesystem</span>
-  c.security.allow_receiver <span class="str">"File"</span>, only: [<span class="str">"read"</span>]
-<span class="kw">end</span>
-<span class="cmt"># 0 :sandbox → 1 :strict → 2 :standard → 3 :permissive → 4 :danger</span></pre>
-    </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
 
@@ -217,9 +164,29 @@ Mana.configure <span class="kw">do</span> |c|
 <section>
   <h2>What makes it different</h2>
   <p class="lead">Mana turns LLM into a Ruby co-processor. Your natural language strings can read and write live Ruby state.</p>
+
+  <h3 style="margin-top:2rem">1. Semantic computation</h3>
   <div class="grid cmp">
     <div>
-      <h3>Traditional LLM wrapper</h3>
+      <h3>Traditional approach</h3>
+<pre style="border:none;margin:0;background:none;">words = { <span class="str">"three"</span> =&gt; <span class="num">3</span>, <span class="str">"cuatro"</span> =&gt; <span class="num">4</span> }
+nums = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
+<span class="cmt"># Need a lookup table for every language?</span>
+<span class="cmt"># What about "五"? Add Chinese? Japanese?</span>
+<span class="cmt"># This doesn't scale.</span></pre>
+    </div>
+    <div>
+      <h3>ruby-mana</h3>
+<pre style="border:none;margin:0;background:none;">numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
+<span class="ms">~"compute the semantic average of &lt;numbers&gt;, store in &lt;result&gt;"</span>
+result  <span class="cmt"># =&gt; 3.0</span></pre>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2rem">2. Object manipulation</h3>
+  <div class="grid cmp">
+    <div>
+      <h3>Traditional approach</h3>
 <pre style="border:none;margin:0;background:none;">client = LLM::Client.new
 response = client.chat(
   <span class="str">"Classify: #{email.subject}"</span>
@@ -230,9 +197,51 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
     </div>
     <div>
       <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;"><span class="ms">~"read &lt;email&gt; subject and body, set its category and priority"</span>
+<pre style="border:none;margin:0;background:none;"><span class="ms">~"read &lt;email&gt; subject, set its category and priority"</span>
 
 <span class="cmt"># That's it. email.category and email.priority are set.</span></pre>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2rem">3. LLM compiler</h3>
+  <div class="grid cmp">
+    <div>
+      <h3>Traditional approach</h3>
+<pre style="border:none;margin:0;background:none;">response = client.chat(<span class="str">"Write a fibonacci function"</span>)
+code = extract_code(response)
+File.write(<span class="str">"fibonacci.rb"</span>, code)
+<span class="cmt"># manually load, validate, cache...</span>
+<span class="cmt"># what if the prompt changes?</span>
+<span class="cmt"># what about parameter signatures?</span></pre>
+    </div>
+    <div>
+      <h3>ruby-mana</h3>
+<pre style="border:none;margin:0;background:none;"><span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
+  <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
+<span class="kw">end</span>
+fibonacci(<span class="num">10</span>)  <span class="cmt"># generated once → cached → pure Ruby</span></pre>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2rem">4. Function discovery</h3>
+  <div class="grid cmp">
+    <div>
+      <h3>Traditional approach</h3>
+<pre style="border:none;margin:0;background:none;">tools = [{
+  name: <span class="str">"fetch_price"</span>,
+  description: <span class="str">"Get stock price"</span>,
+  parameters: { symbol: { type: <span class="str">"string"</span> } }
+}]
+response = client.chat(prompt, tools: tools)
+<span class="cmt"># parse tool_calls, dispatch manually...</span></pre>
+    </div>
+    <div>
+      <h3>ruby-mana</h3>
+<pre style="border:none;margin:0;background:none;"><span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
+  { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol]
+<span class="kw">end</span>
+<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span>
+<span class="cmt"># LLM discovers fetch_price from your source code</span></pre>
     </div>
   </div>
 </section>
@@ -242,48 +251,20 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
   <h2>Features</h2>
   <div class="grid">
     <div class="card">
-      <h3>🔮 <code>~"..."</code> syntax</h3>
-      <p>One character turns any string into an LLM prompt that operates on live Ruby state. Variables, objects, functions — all accessible.</p>
+      <h3>🔮 Semantic computation</h3>
+      <p><code>~"..."</code> turns any string into an LLM prompt that reads and writes live Ruby state. One character, full binding access — variables, objects, functions.</p>
     </div>
     <div class="card">
-      <h3>📖 Bidirectional binding</h3>
-      <p>LLM reads your variables with <code>&lt;var&gt;</code>, writes back with <code>write_var</code>. No serialization, no parsing — direct access to the Ruby binding.</p>
-    </div>
-    <div class="card">
-      <h3>⚡ Auto-discovery</h3>
-      <p>LLM discovers your Ruby functions automatically. Add comments for descriptions and <code>@param</code> for types — no registration needed.</p>
+      <h3>📖 Object manipulation</h3>
+      <p>LLM reads attributes with <code>&lt;var&gt;</code>, writes back directly. No JSON parsing, no serialization — it operates on your Ruby objects in place.</p>
     </div>
     <div class="card">
       <h3>🧬 LLM compiler</h3>
       <p><code>mana def</code> generates method implementations on first call, caches as real <code>.rb</code> files. Subsequent calls are pure Ruby — zero API cost.</p>
     </div>
     <div class="card">
-      <h3>🔍 Source introspection</h3>
-      <p>Prism AST parser auto-discovers your methods and their signatures. LLM knows what functions are available without you listing them.</p>
-    </div>
-    <div class="card">
-      <h3>🛡️ Tool system</h3>
-      <p>Built-in tools: read/write variables, read/write attributes, call functions, remember facts. All your Ruby functions become callable tools.</p>
-    </div>
-    <div class="card">
-      <h3>🧠 Automatic memory</h3>
-      <p>Short-term context shared across <code>~"..."</code> calls by default. Long-term memory persists to disk. <code>Mana.incognito</code> for clean-slate mode.</p>
-    </div>
-    <div class="card">
-      <h3>🪆 Nested prompts</h3>
-      <p>Functions called by LLM can themselves use <code>~"..."</code>. Each nested call gets its own conversation context while sharing long-term memory.</p>
-    </div>
-    <div class="card">
-      <h3>🧪 Test mode</h3>
-      <p>Stub LLM responses with <code>mock_prompt</code>. String or regex matching, block-based dynamic values. Zero API calls in tests.</p>
-    </div>
-    <div class="card">
-      <h3>🔌 Multi-LLM backends</h3>
-      <p>Anthropic and OpenAI-compatible APIs out of the box. Works with Ollama, DeepSeek, Groq, and more. Auto-detects backend from model name.</p>
-    </div>
-    <div class="card">
-      <h3>🔒 Security levels</h3>
-      <p>5 levels from <code>:sandbox</code> (0) to <code>:danger</code> (4). Fine-grained control over what the LLM can call. Default <code>:standard</code> allows read-only filesystem.</p>
+      <h3>⚡ Function discovery</h3>
+      <p>Prism AST parser auto-discovers your methods and signatures. Just define Ruby functions — LLM finds and calls them. No registration needed.</p>
     </div>
   </div>
 </section>
@@ -293,8 +274,8 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
   <h2>Examples</h2>
 
   <div class="ex">
-    <h3>Variables — read and write</h3>
-    <p>Use <code>&lt;var&gt;</code> to reference variables. Existing ones are read, new ones are created.</p>
+    <h3>Semantic computation</h3>
+    <p>Use <code>&lt;var&gt;</code> to reference variables. LLM understands meaning across languages and types.</p>
 <pre>name = <span class="str">"Alice"</span>
 scores = [<span class="num">85</span>, <span class="num">92</span>, <span class="num">78</span>, <span class="num">95</span>, <span class="num">88</span>]
 
@@ -305,33 +286,23 @@ puts comment  <span class="cmt"># =&gt; "Excellent and consistent performance"</
   </div>
 
   <div class="ex">
-    <h3>Function calling</h3>
-    <p>LLM discovers and calls your Ruby methods automatically via source introspection.</p>
-<pre><span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
-  { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"GOOG"</span> =&gt; <span class="num">141.2</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol] || <span class="num">0</span>
+    <h3>Object manipulation</h3>
+    <p>LLM reads and writes object attributes directly — no serialization needed.</p>
+<pre><span class="kw">class</span> Email
+  <span class="kw">attr_accessor</span> <span class="str">:subject</span>, <span class="str">:body</span>, <span class="str">:category</span>, <span class="str">:priority</span>
 <span class="kw">end</span>
 
-portfolio = [<span class="str">"AAPL"</span>, <span class="str">"GOOG"</span>, <span class="str">"TSLA"</span>]
-<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, store the sum in &lt;total&gt;"</span>
-puts total  <span class="cmt"># =&gt; 579.6</span></pre>
+email = Email.new
+email.subject = <span class="str">"URGENT: Server down"</span>
+email.body = <span class="str">"Database connection pool exhausted..."</span>
+
+<span class="ms">~"read &lt;email&gt; subject and body, set its category and priority"</span>
+puts email.category  <span class="cmt"># =&gt; "infrastructure"</span>
+puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
   </div>
 
   <div class="ex">
-    <h3>Function discovery with comments</h3>
-    <p>Add comments above your functions — Mana extracts descriptions and types for the LLM.</p>
-<pre><span class="cmt"># Execute a SQL query and return results</span>
-<span class="cmt"># @param sql [String] the SQL query</span>
-<span class="cmt"># @param limit [Integer] max rows</span>
-<span class="kw">def</span> <span class="fn">query_db</span>(sql:, limit: <span class="num">10</span>)
-  ActiveRecord::Base.connection.execute(sql).first(limit)
-<span class="kw">end</span>
-
-<span class="ms">~"find the 5 most recent orders using query_db, store in &lt;orders&gt;"</span>
-orders.each { |o| puts o[<span class="str">"id"</span>] }</pre>
-  </div>
-
-  <div class="ex">
-    <h3>LLM-compiled methods</h3>
+    <h3>LLM compiler</h3>
     <p>LLM writes the implementation once, caches it as a real <code>.rb</code> file. After that, pure Ruby.</p>
 <pre><span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
   <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
@@ -344,69 +315,15 @@ puts Mana.source(<span class="str">:fibonacci</span>)  <span class="cmt"># view 
   </div>
 
   <div class="ex">
-    <h3>Nested prompts</h3>
-    <p>Functions called by LLM can contain <code>~"..."</code> prompts. Each nested call gets isolated context.</p>
-<pre><span class="cmt"># Lambda style — concise</span>
-lint = ->(<span class="fn">code</span>) { <span class="ms">~"check #{code} for style issues, store in &lt;issues&gt;"</span> }
-<span class="cmt"># Equivalent to:
-# def lint(code)
-#   ~"check #{code} for style issues, store in &lt;issues&gt;"
-#   issues
-# end</span>
-
-<span class="ms">~"review &lt;codebase&gt;, call lint for each file, store report in &lt;report&gt;"</span>
-puts report  <span class="cmt"># outer LLM only sees return values, context stays clean</span></pre>
-  </div>
-
-  <div class="ex">
-    <h3>Memory — automatic context</h3>
-    <p>Consecutive calls share context by default. Use <code>remember</code> for persistent long-term memory.</p>
-<pre><span class="cmt"># Memory is automatic — no session blocks</span>
-<span class="ms">~"remember: always use British English"</span>
-<span class="ms">~"translate &lt;text&gt; to English"</span>   <span class="cmt"># uses British English</span>
-<span class="ms">~"translate &lt;text2&gt; to English"</span>  <span class="cmt"># still remembers</span>
-
-<span class="cmt"># Long-term memory persists across script runs</span>
-Mana.memory                     <span class="cmt"># inspect memory state</span>
-Mana.memory.forget(id: <span class="num">1</span>)      <span class="cmt"># remove a specific memory</span>
-
-<span class="cmt"># Incognito mode — clean slate</span>
-Mana.incognito <span class="kw">do</span>
-  <span class="ms">~"translate &lt;text3&gt;"</span>           <span class="cmt"># no memory loaded or saved</span>
-<span class="kw">end</span></pre>
-  </div>
-
-  <div class="ex">
-    <h3>Testing — mock mode</h3>
-    <p>Stub LLM responses by pattern. No API key or network needed in tests.</p>
-<pre><span class="kw">require</span> <span class="str">"mana"</span>
-
-RSpec.describe MyApp <span class="kw">do</span>
-  include Mana::TestHelpers
-
-  it <span class="str">"analyzes code"</span> <span class="kw">do</span>
-    mock_prompt <span class="str">"analyze"</span>, bugs: [<span class="str">"XSS"</span>], score: <span class="num">8.5</span>
-
-    result = MyApp.analyze(<span class="str">"input"</span>)
-    expect(result[:bugs]).to include(<span class="str">"XSS"</span>)
-  <span class="kw">end</span>
-<span class="kw">end</span></pre>
-  </div>
-
-  <div class="ex">
-    <h3>Object manipulation</h3>
-    <p>LLM reads and writes object attributes directly.</p>
-<pre><span class="kw">class</span> Email
-  <span class="kw">attr_accessor</span> <span class="str">:subject</span>, <span class="str">:body</span>, <span class="str">:category</span>, <span class="str">:priority</span>
+    <h3>Function discovery</h3>
+    <p>Just define Ruby functions — LLM discovers and calls them automatically via AST introspection.</p>
+<pre><span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
+  { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"GOOG"</span> =&gt; <span class="num">141.2</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol] || <span class="num">0</span>
 <span class="kw">end</span>
 
-email = Email.new
-email.subject = <span class="str">"URGENT: Server down"</span>
-email.body = <span class="str">"Database connection pool exhausted..."</span>
-
-<span class="ms">~"read &lt;email&gt; subject and body, set its category and priority"</span>
-puts email.category  <span class="cmt"># =&gt; "infrastructure"</span>
-puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
+portfolio = [<span class="str">"AAPL"</span>, <span class="str">"GOOG"</span>, <span class="str">"TSLA"</span>]
+<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, store the sum in &lt;total&gt;"</span>
+puts total  <span class="cmt"># =&gt; 579.6</span></pre>
   </div>
 </section>
 
@@ -502,7 +419,7 @@ puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
     <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a> ·
     MIT License
   </p>
-  <p style="margin-top:8px">Ruby 3.3+ / 4.0 · Built with algebraic effects</p>
+  <p style="margin-top:8px">Ruby 3.3+ · Claude, GPT, and local LLMs · MIT licensed</p>
 </footer>
 
 </div>

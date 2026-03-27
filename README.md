@@ -2,7 +2,7 @@
 
 [![Gem Version](https://badge.fury.io/rb/ruby-mana.svg)](https://rubygems.org/gems/ruby-mana) · [Website](https://twokidscarl.github.io/ruby-mana/) · [RubyGems](https://rubygems.org/gems/ruby-mana) · [GitHub](https://github.com/twokidsCarl/ruby-mana)
 
-Embed LLM as native Ruby. Write natural language, it just runs.
+Embed LLM as native Ruby. Write natural language, it just runs. Not an API wrapper — a language construct that weaves LLM into your code.
 
 ```ruby
 require "mana"
@@ -11,12 +11,6 @@ numbers = [1, "2", "three", "cuatro", "五"]
 ~"compute the semantic average of <numbers> and store in <result>"
 puts result  # => 3.0
 ```
-
-## What is this?
-
-Mana turns LLM into a Ruby co-processor. Your natural language strings can read and write Ruby variables, call Ruby functions, manipulate objects, and control program flow — all from a single `~"..."`.
-
-Not an API wrapper. Not prompt formatting. Mana weaves LLM into your Ruby code as a first-class construct.
 
 ## Install
 
@@ -93,9 +87,11 @@ puts email.priority   # => "high"
 
 ### Calling Ruby functions
 
-LLM can call functions in your scope:
+LLM discovers and calls your Ruby functions automatically. Add YARD comments for better understanding:
 
 ```ruby
+# Look up stock price by symbol
+# @param symbol [String] ticker symbol
 def fetch_price(symbol)
   { "AAPL" => 189.5, "GOOG" => 141.2, "TSLA" => 248.9 }[symbol] || 0
 end
@@ -109,6 +105,41 @@ portfolio = ["AAPL", "GOOG", "TSLA", "MSFT"]
 ~"iterate <portfolio>, call fetch_price for each, send_alert if price > 200, store the sum in <total>"
 puts total  # => 579.6
 ```
+
+The LLM sees your functions with descriptions and types:
+```
+Available Ruby functions:
+  fetch_price(symbol) — Look up stock price by symbol
+  send_alert(msg)
+```
+
+Both positional and keyword arguments are supported. Functions are discovered from the source file (via Prism AST) and from methods defined on `self`.
+
+### LLM-compiled methods
+
+`mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
+
+```ruby
+mana def fibonacci(n)
+  ~"return an array of the first n Fibonacci numbers"
+end
+
+fibonacci(10)  # first call → LLM generates code → cached → executed
+fibonacci(20)  # pure Ruby from .mana_cache/
+
+# Works in classes too
+class Converter
+  include Mana::Mixin
+
+  mana def celsius_to_fahrenheit(c)
+    ~"convert Celsius to Fahrenheit"
+  end
+end
+```
+
+Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to skip LLM on CI).
+
+## Advanced
 
 ### Mixed control flow
 
@@ -152,39 +183,50 @@ lint = ->(code) { ~"check #{code} for style issues, store in <issues>" }
 
 Each nested call gets its own conversation context. The outer LLM only sees the function's return value, keeping its context clean.
 
-### LLM-compiled methods
+### Memory
 
-`mana def` lets LLM generate a method implementation on first call. The generated code is cached as a real `.rb` file — subsequent calls are pure Ruby with zero API overhead.
+Mana has two types of memory:
+
+- **Short-term memory** — conversation history within the current process. Each `~"..."` call appends to it, so consecutive calls share context. Cleared when the process exits.
+- **Long-term memory** — persistent facts stored on disk (`~/.mana/`). Survives across script executions. The LLM can save facts via the `remember` tool.
 
 ```ruby
-mana def fibonacci(n)
-  ~"return an array of the first n Fibonacci numbers"
-end
+~"translate <text1> to Japanese, store in <result1>"
+~"translate <text2> to the same language, store in <result2>"   # remembers "Japanese"
 
-fibonacci(10)  # first call → LLM generates code → cached → executed
-fibonacci(20)  # pure Ruby from .mana_cache/
+~"remember that the user prefers concise output"
+# persists to ~/.mana/ — available in future script runs
+```
 
-# View the generated source
-puts Mana.source(:fibonacci)
-# def fibonacci(n)
-#   return [] if n <= 0
-#   return [0] if n == 1
-#   fib = [0, 1]
-#   (2...n).each { |i| fib << fib[i-1] + fib[i-2] }
-#   fib
-# end
+```ruby
+Mana.memory.short_term         # view conversation history
+Mana.memory.long_term          # view persisted facts
+Mana.memory.forget(id: 2)     # remove a specific fact
+Mana.memory.clear!             # clear everything
+```
 
-# Works in classes too
-class Converter
-  include Mana::Mixin
+#### Compaction
 
-  mana def celsius_to_fahrenheit(c)
-    ~"convert Celsius to Fahrenheit"
-  end
+When conversation history grows large, Mana automatically compacts old messages into summaries:
+
+```ruby
+Mana.configure do |c|
+  c.memory_pressure = 0.7       # compact when tokens > 70% of context window
+  c.memory_keep_recent = 4      # keep last 4 rounds, summarize the rest
+  c.compact_model = nil          # nil = use main model for summarization
+  c.on_compact = ->(summary) { puts "Compacted: #{summary}" }
 end
 ```
 
-Generated files live in `.mana_cache/` (add to `.gitignore`, or commit them to skip LLM on CI).
+#### Incognito mode
+
+Run without any memory — nothing is loaded or saved:
+
+```ruby
+Mana.incognito do
+  ~"translate <text>"  # no memory, no persistence
+end
+```
 
 ## Configuration
 
@@ -300,94 +342,7 @@ Mana.configure do |c|
 end
 ```
 
-### Function discovery
-
-Mana automatically discovers your Ruby functions and makes them available to the LLM. Add comments above your functions for better LLM understanding:
-
-```ruby
-# Query the database and return results
-# @param sql [String] the SQL query
-# @param limit [Integer] maximum rows to return
-def query_db(sql:, limit: 10)
-  ActiveRecord::Base.connection.execute(sql).first(limit)
-end
-
-# Search the web for information
-# @param query [String] search keywords
-def search_web(query:)
-  WebSearch.search(query)
-end
-
-~"use query_db to find recent orders, store in <orders>"
-~"search_web for 'ruby mana gem', store in <results>"
-```
-
-The LLM sees:
-```
-Available Ruby functions:
-  query_db(sql:, limit: ...) — Query the database and return results
-  search_web(query:) — Search the web for information
-```
-
-Both positional and keyword arguments are supported. Functions are discovered from the source file (via Prism AST) and from methods defined on `self`.
-
-### Memory
-
-Mana has two types of memory:
-
-- **Short-term memory** — conversation history within the current process. Each `~"..."` call appends to it, so consecutive calls share context. Cleared when the process exits.
-- **Long-term memory** — persistent facts stored on disk. Survives across script executions. The LLM can save facts via the `remember` tool.
-
-#### Short-term memory (conversation context)
-
-Consecutive `~"..."` calls automatically share context. No wrapper block needed:
-
-```ruby
-~"translate <text1> to Japanese, store in <result1>"
-~"translate <text2> to the same language, store in <result2>"   # remembers "Japanese"
-~"which translation was harder? store in <analysis>"            # can reference both
-```
-
-Short-term memory is per-thread and auto-created on the first `~"..."` call.
-
-```ruby
-Mana.memory.short_term         # view conversation history
-Mana.memory.clear_short_term!  # clear conversation history
-```
-
-#### Long-term memory (persistent facts)
-
-The LLM has a `remember` tool that persists facts to disk. These survive across script executions:
-
-```ruby
-# script_1.rb
-~"remember that the user prefers concise output"
-
-# script_2.rb (later, separate execution)
-~"translate <text>"  # LLM sees "user prefers concise output" in long-term memory
-```
-
-Identical content is automatically deduplicated.
-
-```ruby
-Mana.memory.long_term          # view all persisted facts
-Mana.memory.forget(id: 2)     # remove a specific fact
-Mana.memory.clear_long_term!   # clear all long-term memory
-Mana.memory.clear!             # clear both short-term and long-term
-```
-
-#### Incognito mode
-
-Run without any memory — nothing is loaded or saved:
-
-```ruby
-Mana.incognito do
-  ~"translate <text>"  # no memory, no persistence
-end
-```
-
-
-### Testing
+## Testing
 
 Use `Mana.mock` to test code that uses `~"..."` without calling any API:
 
