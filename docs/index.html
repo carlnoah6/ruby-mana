@@ -34,7 +34,9 @@
     .card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:20px 24px}
     .card h3{font-size:1rem;margin-bottom:6px} .card p{font-size:.88rem;color:var(--dim)}
     .card code{color:var(--gr);font-size:.85rem}
-    .cmp>div{background:var(--sf);border:2px solid var(--bd);border-radius:10px;padding:20px 24px}
+    .cmp{margin-left:-80px;margin-right:-80px;grid-template-columns:2fr 3fr}
+    .cmp>div{background:var(--sf);border:2px solid var(--bd);border-radius:10px;padding:20px 24px;min-width:0}
+    .cmp>div pre{border:none;margin:0;padding:0;background:none;white-space:pre-wrap;word-break:break-word;font-size:.82rem}
     .cmp>div h3{font-size:.95rem;margin-bottom:12px;color:var(--dim)}
     .cmp>div:last-child{border-color:var(--ac)} .cmp>div:last-child h3{color:var(--ac)}
     .ex{margin-top:32px} .ex h3{font-size:1.15rem;margin-bottom:12px} .ex p{font-size:.9rem;color:var(--dim);margin-bottom:12px}
@@ -76,6 +78,7 @@
       section h2{font-size:1.5rem}
       .lead{font-size:.95rem}
       .grid,.grid-3,.cmp{grid-template-columns:1fr}
+      .cmp{margin-left:0;margin-right:0}
       .card{padding:16px 18px}
       .card h3{font-size:.95rem}
       .card p{font-size:.82rem}
@@ -106,7 +109,6 @@
       <a href="#features">Features</a>
       <a href="#examples">Examples</a>
       <a href="#security">Security</a>
-      <a href="#how">How it works</a>
       <a href="https://github.com/twokidsCarl/ruby-mana">GitHub</a>
       <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a>
     </div>
@@ -120,20 +122,24 @@
   <h1>ruby-<span class="m">mana</span> 🔮</h1>
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
-  <p class="sub" style="margin-top:8px;font-size:.95rem;color:var(--dim)">Ruby 3.3+ gem that embeds Claude, GPT, and local LLMs as native language constructs. 5 security levels. MIT licensed.</p>
+  <p class="sub" style="margin-top:8px;font-size:.95rem;color:var(--dim)">Ruby 3.3+ gem that embeds LLM as a native language construct. 5 security levels. MIT licensed.</p>
 
   <div class="carousel" id="heroCarousel">
     <div class="slide active">
 <pre><span class="cmt"># Multilingual semantic computation</span>
 numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
+
 <span class="ms">~"compute the semantic average of &lt;numbers&gt; and store in &lt;result&gt;"</span>
+
 puts result  <span class="cmt"># =&gt; 3.0</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM reads and writes Ruby objects directly</span>
 <span class="kw">class</span> Email &lt; Struct.new(<span class="str">:subject</span>, <span class="str">:category</span>, <span class="str">:priority</span>); <span class="kw">end</span>
 email = Email.new(<span class="str">"URGENT: Server down"</span>)
+
 <span class="ms">~"read &lt;email&gt; subject, set its category and priority"</span>
+
 email.category  <span class="cmt"># =&gt; "infrastructure"</span>
 email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
     </div>
@@ -142,20 +148,27 @@ email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
 <span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
   <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
 <span class="kw">end</span>
-fibonacci(<span class="num">10</span>)  <span class="cmt"># generated once → cached → pure Ruby</span></pre>
+
+fibonacci(<span class="num">10</span>)  <span class="cmt"># first call → LLM generates → cached as .rb</span>
+fibonacci(<span class="num">20</span>)  <span class="cmt"># second call → pure Ruby, zero API cost</span></pre>
     </div>
     <div class="slide">
 <pre><span class="cmt"># LLM calls your functions automatically</span>
 <span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
   { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol]
 <span class="kw">end</span>
-<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span></pre>
+
+portfolio = [<span class="str">"AAPL"</span>, <span class="str">"TSLA"</span>]
+
+<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span>
+
+puts total  <span class="cmt"># =&gt; 438.4</span></pre>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
   </div>
 
-  <div class="install-hero">
-    <code><span class="d">$ </span>gem install ruby-mana</code>
+  <div class="ib" style="margin-top:32px">
+    <code><span class="d">$ </span><span style="color:var(--gr)">gem install ruby-mana</span></code>
   </div>
   <p style="font-size:.85rem;color:var(--dim)">or <code style="color:var(--dim)">gem "ruby-mana"</code> in your Gemfile</p>
 </div>
@@ -275,55 +288,57 @@ response = client.chat(prompt, tools: tools)
 
   <div class="ex">
     <h3>Semantic computation</h3>
-    <p>Use <code>&lt;var&gt;</code> to reference variables. LLM understands meaning across languages and types.</p>
-<pre>name = <span class="str">"Alice"</span>
-scores = [<span class="num">85</span>, <span class="num">92</span>, <span class="num">78</span>, <span class="num">95</span>, <span class="num">88</span>]
+    <p>LLM understands meaning across types, languages, and messy real-world data.</p>
+<pre>reviews = [<span class="str">"amazing product!"</span>, <span class="str">"terrible, broke in 2 days"</span>, <span class="str">"it's okay I guess"</span>, <span class="str">"最高！"</span>]
 
-<span class="ms">~"analyze &lt;scores&gt; for &lt;name&gt;, store mean in &lt;average&gt; and a comment in &lt;comment&gt;"</span>
+<span class="ms">~"analyze sentiment of each &lt;reviews&gt;, store scores in &lt;sentiments&gt; and overall in &lt;summary&gt;"</span>
 
-puts average  <span class="cmt"># =&gt; 87.6</span>
-puts comment  <span class="cmt"># =&gt; "Excellent and consistent performance"</span></pre>
+puts sentiments  <span class="cmt"># =&gt; [0.9, -0.8, 0.1, 0.95]</span>
+puts summary     <span class="cmt"># =&gt; "Generally positive (3/4), one strongly negative"</span></pre>
   </div>
 
   <div class="ex">
     <h3>Object manipulation</h3>
     <p>LLM reads and writes object attributes directly — no serialization needed.</p>
-<pre><span class="kw">class</span> Email
-  <span class="kw">attr_accessor</span> <span class="str">:subject</span>, <span class="str">:body</span>, <span class="str">:category</span>, <span class="str">:priority</span>
+<pre><span class="kw">class</span> Task &lt; Struct.new(<span class="str">:title</span>, <span class="str">:tags</span>, <span class="str">:estimate</span>, <span class="str">:assignee</span>)
 <span class="kw">end</span>
 
-email = Email.new
-email.subject = <span class="str">"URGENT: Server down"</span>
-email.body = <span class="str">"Database connection pool exhausted..."</span>
+task = Task.new(<span class="str">"Migrate user auth to OAuth2"</span>)
 
-<span class="ms">~"read &lt;email&gt; subject and body, set its category and priority"</span>
-puts email.category  <span class="cmt"># =&gt; "infrastructure"</span>
-puts email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
+<span class="ms">~"read &lt;task&gt; title, set appropriate tags, estimate in hours, and suggest assignee"</span>
+
+puts task.tags      <span class="cmt"># =&gt; ["backend", "security", "auth"]</span>
+puts task.estimate  <span class="cmt"># =&gt; 8</span>
+puts task.assignee  <span class="cmt"># =&gt; "senior backend engineer"</span></pre>
   </div>
 
   <div class="ex">
     <h3>LLM compiler</h3>
-    <p>LLM writes the implementation once, caches it as a real <code>.rb</code> file. After that, pure Ruby.</p>
-<pre><span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
-  <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
+    <p>Describe what you want, LLM writes the code once, caches it as a <code>.rb</code> file. After that, pure Ruby.</p>
+<pre><span class="kw">mana def</span> <span class="fn">slugify</span>(title)
+  <span class="ms">~"convert title to a URL-safe slug: lowercase, hyphens, no special chars"</span>
 <span class="kw">end</span>
 
-fibonacci(<span class="num">10</span>)  <span class="cmt"># first call → LLM generates → cached</span>
-fibonacci(<span class="num">20</span>)  <span class="cmt"># pure Ruby, zero API cost</span>
+slugify(<span class="str">"Hello, World! 你好"</span>)  <span class="cmt"># first call → LLM generates → cached</span>
+slugify(<span class="str">"Another Post"</span>)        <span class="cmt"># second call → pure Ruby, zero API cost</span>
 
-puts Mana.source(<span class="str">:fibonacci</span>)  <span class="cmt"># view the generated code</span></pre>
+puts Mana.source(<span class="str">:slugify</span>)    <span class="cmt"># view the generated code</span></pre>
   </div>
 
   <div class="ex">
     <h3>Function discovery</h3>
     <p>Just define Ruby functions — LLM discovers and calls them automatically via AST introspection.</p>
-<pre><span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
-  { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"GOOG"</span> =&gt; <span class="num">141.2</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol] || <span class="num">0</span>
+<pre><span class="cmt"># Search users by name</span>
+<span class="kw">def</span> <span class="fn">find_users</span>(query:, limit: <span class="num">5</span>)
+  User.where(<span class="str">"name LIKE ?"</span>, <span class="str">"%#{query}%"</span>).limit(limit)
 <span class="kw">end</span>
 
-portfolio = [<span class="str">"AAPL"</span>, <span class="str">"GOOG"</span>, <span class="str">"TSLA"</span>]
-<span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, store the sum in &lt;total&gt;"</span>
-puts total  <span class="cmt"># =&gt; 579.6</span></pre>
+<span class="cmt"># Send an email notification</span>
+<span class="kw">def</span> <span class="fn">notify</span>(user_id:, message:)
+  Mailer.send(user_id, message)
+<span class="kw">end</span>
+
+<span class="ms">~"find users named 'Alice', notify each about the maintenance window tomorrow"</span></pre>
   </div>
 </section>
 
@@ -332,12 +347,27 @@ puts total  <span class="cmt"># =&gt; 579.6</span></pre>
   <h2>Security policy</h2>
   <p class="lead">5 levels control what the LLM can call. Higher number = more permissions.</p>
 
-  <div style="margin-bottom:24px">
-    <p><strong>Level 0 — <code>:sandbox</code></strong> — Variables and user-defined functions only. Everything else blocked.</p>
-    <p><strong>Level 1 — <code>:strict</code></strong> — + safe stdlib: <code>Time.now</code>, <code>Date.today</code>, <code>Math.*</code></p>
-    <p style="color:var(--ac)"><strong>Level 2 — <code>:standard</code> (default)</strong> — + read filesystem: <code>File.read</code>, <code>Dir.glob</code>. Write/delete still blocked.</p>
-    <p><strong>Level 3 — <code>:permissive</code></strong> — + write files, network, require. Only eval/exec/fork blocked.</p>
-    <p><strong>Level 4 — <code>:danger</code></strong> — No restrictions. Use only in fully trusted environments.</p>
+  <div class="steps" style="margin-bottom:24px">
+    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:8px">
+      <div class="sn" style="background:var(--bd);color:var(--dim)">0</div>
+      <div class="st"><strong><code>:sandbox</code></strong> — Variables and user-defined functions only. Everything else blocked.</div>
+    </div>
+    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:8px">
+      <div class="sn" style="background:var(--bd);color:var(--dim)">1</div>
+      <div class="st"><strong><code>:strict</code></strong> — + safe stdlib: <code>Time.now</code>, <code>Date.today</code>, <code>Math.*</code></div>
+    </div>
+    <div class="step" style="background:var(--sf);border:2px solid var(--ac);border-radius:8px;padding:16px;margin-bottom:8px">
+      <div class="sn">2</div>
+      <div class="st"><strong style="color:var(--ac)"><code>:standard</code> (default)</strong> — + read filesystem: <code>File.read</code>, <code>Dir.glob</code>. Write/delete still blocked.</div>
+    </div>
+    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:8px">
+      <div class="sn" style="background:var(--bd);color:var(--dim)">3</div>
+      <div class="st"><strong><code>:permissive</code></strong> — + write files, network, require. Only eval/exec/fork blocked.</div>
+    </div>
+    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px">
+      <div class="sn" style="background:var(--bd);color:var(--dim)">4</div>
+      <div class="st"><strong><code>:danger</code></strong> — No restrictions. Use only in fully trusted environments.</div>
+    </div>
   </div>
 
 <pre>Mana.configure <span class="kw">do</span> |c|
@@ -350,13 +380,9 @@ puts total  <span class="cmt"># =&gt; 579.6</span></pre>
 <span class="kw">end</span></pre>
 </section>
 
-<!-- Install -->
-<section>
-  <h2>Install</h2>
-  <div class="ib"><code><span class="d">$ </span>gem install ruby-mana</code></div>
-  <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Or in your Gemfile: <code>gem "ruby-mana"</code></p>
-  <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Requires Ruby 3.3+ (including 4.0) and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
-  <p style="margin-top:12px"><a href="https://github.com/twokidsCarl/ruby-mana#readme">Full documentation on GitHub →</a></p>
+<!-- Docs link -->
+<section style="text-align:center">
+  <p><a href="https://github.com/twokidsCarl/ruby-mana#readme">Full documentation on GitHub →</a></p>
 </section>
 
 <!-- Footer -->
