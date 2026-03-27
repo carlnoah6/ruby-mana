@@ -1,6 +1,6 @@
 # ruby-mana 🔮
 
-[![Gem Version](https://badge.fury.io/rb/ruby-mana.svg)](https://rubygems.org/gems/ruby-mana)
+[![Gem Version](https://badge.fury.io/rb/ruby-mana.svg)](https://rubygems.org/gems/ruby-mana) · [Website](https://twokidscarl.github.io/ruby-mana/) · [RubyGems](https://rubygems.org/gems/ruby-mana) · [GitHub](https://github.com/twokidsCarl/ruby-mana)
 
 Embed LLM as native Ruby. Write natural language, it just runs.
 
@@ -454,10 +454,6 @@ Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the 
 6. Loop until LLM calls `done` or returns without tool calls
 7. After completion, memory compaction runs in background if context is getting large
 
-
-## Links
-
-**[Website](https://twokidscarl.github.io/ruby-mana/)** · **[RubyGems](https://rubygems.org/gems/ruby-mana)** · **[GitHub](https://github.com/twokidsCarl/ruby-mana)**
 
 ## License
 
