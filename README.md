@@ -1,6 +1,10 @@
 # ruby-mana 🔮
 
+[![Gem Version](https://badge.fury.io/rb/ruby-mana.svg)](https://rubygems.org/gems/ruby-mana)
+
 Embed LLM as native Ruby. Write natural language, it just runs.
+
+**[Website](https://twokidscarl.github.io/ruby-mana/)** · **[RubyGems](https://rubygems.org/gems/ruby-mana)** · **[GitHub](https://github.com/twokidsCarl/ruby-mana)**
 
 ```ruby
 require "mana"
