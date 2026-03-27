@@ -332,27 +332,12 @@ puts total  <span class="cmt"># =&gt; 579.6</span></pre>
   <h2>Security policy</h2>
   <p class="lead">5 levels control what the LLM can call. Higher number = more permissions.</p>
 
-  <div class="grid" style="margin-bottom:24px">
-    <div class="card">
-      <h3>Level 0 — <code>:sandbox</code></h3>
-      <p>Variables and user-defined functions only. Everything else blocked.</p>
-    </div>
-    <div class="card">
-      <h3>Level 1 — <code>:strict</code></h3>
-      <p>+ safe stdlib: <code>Time.now</code>, <code>Date.today</code>, <code>Math.*</code></p>
-    </div>
-    <div class="card" style="border-color:var(--ac)">
-      <h3>Level 2 — <code>:standard</code> (default)</h3>
-      <p>+ read filesystem: <code>File.read</code>, <code>Dir.glob</code>. Write/delete still blocked.</p>
-    </div>
-    <div class="card">
-      <h3>Level 3 — <code>:permissive</code></h3>
-      <p>+ write files, network, require. Only eval/exec/fork blocked.</p>
-    </div>
-    <div class="card">
-      <h3>Level 4 — <code>:danger</code></h3>
-      <p>No restrictions at all. Use only in fully trusted environments.</p>
-    </div>
+  <div style="margin-bottom:24px">
+    <p><strong>Level 0 — <code>:sandbox</code></strong> — Variables and user-defined functions only. Everything else blocked.</p>
+    <p><strong>Level 1 — <code>:strict</code></strong> — + safe stdlib: <code>Time.now</code>, <code>Date.today</code>, <code>Math.*</code></p>
+    <p style="color:var(--ac)"><strong>Level 2 — <code>:standard</code> (default)</strong> — + read filesystem: <code>File.read</code>, <code>Dir.glob</code>. Write/delete still blocked.</p>
+    <p><strong>Level 3 — <code>:permissive</code></strong> — + write files, network, require. Only eval/exec/fork blocked.</p>
+    <p><strong>Level 4 — <code>:danger</code></strong> — No restrictions. Use only in fully trusted environments.</p>
   </div>
 
 <pre>Mana.configure <span class="kw">do</span> |c|
@@ -365,51 +350,13 @@ puts total  <span class="cmt"># =&gt; 579.6</span></pre>
 <span class="kw">end</span></pre>
 </section>
 
-<!-- How it works -->
-<section id="how">
-  <h2>How it works</h2>
-  <p class="lead">Mana uses Ruby's unary <code>~</code> operator to turn natural language into executable operations.</p>
-  <div class="steps">
-    <div class="step">
-      <div class="sn">1</div>
-      <div class="st"><strong>~"..." triggers String#~@</strong> — captures the caller's Binding via <code>binding_of_caller</code></div>
-    </div>
-    <div class="step">
-      <div class="sn">2</div>
-      <div class="st"><strong>Build context</strong> — reads <code>&lt;var&gt;</code> references, loads memory, discovers available functions via Prism AST</div>
-    </div>
-    <div class="step">
-      <div class="sn">3</div>
-      <div class="st"><strong>LLM call</strong> — prompt + context sent with tools: <code>read_var</code>, <code>write_var</code>, <code>call_func</code>, <code>remember</code>, <code>done</code></div>
-    </div>
-    <div class="step">
-      <div class="sn">4</div>
-      <div class="st"><strong>Tool loop</strong> — LLM responds with tool calls → Mana executes them against the live Ruby binding → sends results back. Security policy controls what's allowed</div>
-    </div>
-    <div class="step">
-      <div class="sn">5</div>
-      <div class="st"><strong>Done</strong> — variables are set, objects modified. Memory compaction runs in background if context is getting large</div>
-    </div>
-  </div>
-</section>
-
 <!-- Install -->
 <section>
   <h2>Install</h2>
   <div class="ib"><code><span class="d">$ </span>gem install ruby-mana</code></div>
   <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Or in your Gemfile: <code>gem "ruby-mana"</code></p>
   <p style="color:var(--dim);font-size:.9rem;margin-bottom:8px">Requires Ruby 3.3+ (including 4.0) and an API key (<code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>).</p>
-</section>
-
-<!-- Research -->
-<section>
-  <h2>Research</h2>
-  <p class="lead">Mana is inspired by MIT's Nightjar project and the theory of algebraic effects and handlers.</p>
-  <p style="color:var(--dim);font-size:.9rem;line-height:1.8">
-    📄 <a href="https://arxiv.org/abs/2512.14805">Sharing State Between Prompts and Programs</a> — the paper behind this approach<br>
-    🐍 <a href="https://github.com/psg-mit/nightjarpy">nightjarpy</a> — MIT's Python implementation<br>
-    💎 ruby-mana — the Ruby implementation, with <code>~"..."</code> syntax and LLM compiler
-  </p>
+  <p style="margin-top:12px"><a href="https://github.com/twokidsCarl/ruby-mana#readme">Full documentation on GitHub →</a></p>
 </section>
 
 <!-- Footer -->
