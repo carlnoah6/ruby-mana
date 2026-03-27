@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+begin
+  require "dotenv/load"
+rescue LoadError
+  # dotenv not installed — skip
+end
+
+require "mana"
+
+Mana::Chat.start(TOPLEVEL_BINDING)

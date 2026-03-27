@@ -34,8 +34,6 @@ module Mana
       self.timeout = (ENV["MANA_TIMEOUT"] || 120).to_i
       @verbose = %w[1 true yes].include?(ENV["MANA_VERBOSE"]&.downcase)
       @backend = ENV["MANA_BACKEND"]&.to_sym
-      sec = ENV["MANA_SECURITY"]
-      @security = SecurityPolicy.new(sec ? sec.to_sym : :standard)
       @namespace = nil
       @memory_store = nil
       @memory_path = nil
@@ -53,23 +51,6 @@ module Mana
       end
 
       @timeout = value
-    end
-
-    # Read the current security policy
-    def security
-      @security
-    end
-
-    # Accept Symbol (:strict), Integer (1), or SecurityPolicy instance
-    def security=(value)
-      case value
-      when SecurityPolicy
-        @security = value
-      when Symbol, Integer
-        @security = SecurityPolicy.new(value)
-      else
-        raise ArgumentError, "security must be a Symbol, Integer, or SecurityPolicy, got #{value.class}"
-      end
     end
 
     # Resolve the effective base URL based on the configured or auto-detected backend.

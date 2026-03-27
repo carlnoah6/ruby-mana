@@ -140,17 +140,6 @@ RSpec.describe Mana::Config do
       expect(c.timeout).to eq(30)
     end
 
-    it "MANA_SECURITY sets security preset" do
-      ENV["MANA_SECURITY"] = "strict"
-      c = described_class.new
-      expect(c.security.preset).to eq(:strict)
-    end
-  end
-
-  describe "security=" do
-    it "raises ArgumentError with invalid type" do
-      expect { config.security = "not_valid" }.to raise_error(ArgumentError, /security must be/)
-    end
   end
 
   describe "accessors" do

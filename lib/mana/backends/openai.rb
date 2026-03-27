@@ -9,6 +9,8 @@ module Mana
     #   - tool calls: `tool_use`/`tool_result` blocks → `tool_calls` + `role: "tool"`
     #   - response: `choices` → content blocks
     class OpenAI < Base
+      # Translates to OpenAI format, posts, then normalizes back to Anthropic format.
+      # Uses max_completion_tokens (not max_tokens) per OpenAI's newer API convention.
       def chat(system:, messages:, tools:, model:, max_tokens: 4096)
         uri = URI("#{@config.effective_base_url}/v1/chat/completions")
         parsed = http_post(uri, {
@@ -41,6 +43,11 @@ module Mana
         result
       end
 
+      # Handles three cases for user messages:
+      # 1. Plain string — pass through
+      # 2. Array of tool_result blocks — convert to OpenAI's "tool" role messages
+      #    (OpenAI uses separate messages per tool result, not an array in one message)
+      # 3. Array of text blocks — merge into a single string
       def convert_user_message(msg)
         content = msg[:content]
 
@@ -64,6 +71,9 @@ module Mana
         { role: "user", content: content.to_s }
       end
 
+      # Splits Anthropic-style content blocks into OpenAI's separate fields:
+      # text goes into :content, tool_use blocks become :tool_calls with JSON-encoded args.
+      # OpenAI requires tool call arguments as JSON strings, not parsed objects.
       def convert_assistant_message(msg)
         content = msg[:content]
 
@@ -99,6 +109,8 @@ module Mana
         { role: "assistant", content: content.to_s }
       end
 
+      # Anthropic uses input_schema with optional $schema key; OpenAI uses parameters
+      # without it. Strip $schema to avoid OpenAI validation errors.
       def convert_tools(tools)
         tools.map do |tool|
           {
@@ -113,6 +125,8 @@ module Mana
       end
 
       # Convert OpenAI response to Anthropic-style content blocks.
+      # This normalization lets the rest of the engine work with a single format
+      # regardless of which backend was used.
       def normalize_response(parsed)
         choice = parsed.dig(:choices, 0, :message)
         return [] unless choice
@@ -123,6 +137,7 @@ module Mana
           blocks << { type: "text", text: choice[:content] }
         end
 
+        # Parse JSON argument strings back into Ruby hashes for tool_use blocks
         if choice[:tool_calls]
           choice[:tool_calls].each do |tc|
             func = tc[:function]

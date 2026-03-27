@@ -2,18 +2,22 @@
 
 require_relative "mana/version"
 require_relative "mana/config"
-require_relative "mana/security_policy"
 require_relative "mana/backends/base"
 require_relative "mana/backends/anthropic"
 require_relative "mana/backends/openai"
 require_relative "mana/memory_store"
 require_relative "mana/memory"
 require_relative "mana/logger"
+require_relative "mana/knowledge"
+require_relative "mana/binding_helpers"
+require_relative "mana/prompt_builder"
+require_relative "mana/tool_handler"
 require_relative "mana/engine"
 require_relative "mana/introspect"
 require_relative "mana/compiler"
 require_relative "mana/string_ext"
 require_relative "mana/mixin"
+require_relative "mana/chat"
 
 module Mana
   class Error < StandardError; end
@@ -64,6 +68,11 @@ module Mana
     # Cache directory for compiled methods
     def cache_dir=(dir)
       Compiler.cache_dir = dir
+    end
+
+    # Enter interactive chat mode. Mana will have access to the caller's binding.
+    def chat
+      Chat.start(binding.of_caller(1))
     end
   end
 end

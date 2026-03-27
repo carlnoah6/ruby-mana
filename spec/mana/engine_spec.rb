@@ -59,6 +59,20 @@ RSpec.describe Mana::Engine do
       expect(obj.category).to eq("urgent")
     end
 
+    it "handles call_func('local_variables') via binding route" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "local_variables" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "c" } }]
+      )
+
+      a = 1 # rubocop:disable Lint/UselessAssignment
+      b_var = 2 # rubocop:disable Lint/UselessAssignment
+      c = 3 # rubocop:disable Lint/UselessAssignment
+      bnd = binding
+      result = Mana::Engine.run("list all variables with value 3", bnd)
+      expect(result).to eq("c")
+    end
+
     it "handles call_func" do
       stub_anthropic_sequence(
         [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "double", "args" => [21] } }],
@@ -73,11 +87,11 @@ RSpec.describe Mana::Engine do
       expect(b.local_variable_get(:result)).to eq(42)
     end
 
-    it "stops when LLM returns no tool calls" do
+    it "raises when LLM returns no tool calls after nudge" do
       stub_anthropic_text_only("All done!")
 
       b = binding
-      expect { Mana::Engine.run("just say hi", b) }.not_to raise_error
+      expect { Mana::Engine.run("just say hi", b) }.to raise_error(Mana::LLMError, /LLM did not use tools/)
     end
 
     it "raises on max iterations exceeded" do
@@ -107,6 +121,28 @@ RSpec.describe Mana::Engine do
 
       b = binding
       expect { Mana::Engine.run("fail", b) }.to raise_error(Mana::LLMError, /HTTP 500/)
+    end
+
+    it "raises LLMError when LLM calls error tool" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "error", input: { "message" => "cannot compute: division by zero" } }]
+      )
+
+      b = binding
+      expect { Mana::Engine.run("divide by zero", b) }.to raise_error(Mana::LLMError, "cannot compute: division by zero")
+    end
+
+    it "rolls back memory messages when error tool is called" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "error", input: { "message" => "failed" } }]
+      )
+
+      memory = Mana::Memory.current
+      messages_before = memory.short_term.size
+
+      b = binding
+      expect { Mana::Engine.run("fail task", b) }.to raise_error(Mana::LLMError)
+      expect(memory.short_term.size).to eq(messages_before)
     end
 
     it "returns done result" do
@@ -414,29 +450,6 @@ RSpec.describe Mana::Engine do
       expect(result).to eq("ok")
     end
 
-    it "blocks receiver calls per security policy" do
-      Mana.config.security = :strict
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "File.read", "args" => ["/etc/hosts"] } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
-      )
-
-      b = binding
-      engine = described_class.new(b)
-      engine.execute("read file")
-    end
-
-    it "blocks methods per security policy" do
-      Mana.config.security = :strict
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "eval" } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
-      )
-
-      b = binding
-      engine = described_class.new(b)
-      engine.execute("eval something")
-    end
   end
 
   describe "verbose mode" do
@@ -475,6 +488,20 @@ RSpec.describe Mana::Engine do
     end
   end
 
+  describe "call_func with body parameter" do
+    it "defines a method via define_method with body" do
+      stub_anthropic_sequence(
+        [{ type: "tool_use", id: "t1", name: "call_func",
+           input: { "name" => "define_method", "args" => ["factorial"], "body" => "|n| n <= 1 ? 1 : n * factorial(n - 1)" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "defined" } }]
+      )
+
+      b = binding
+      result = Mana::Engine.run("define factorial function", b)
+      expect(result).to eq("defined")
+    end
+  end
+
   describe "call_func with keyword arguments" do
     it "passes kwargs to functions" do
       stub_anthropic_sequence(
@@ -503,35 +530,49 @@ RSpec.describe Mana::Engine do
         expect(names).not_to include("remember")
       end
     end
+
+    it "includes knowledge tool" do
+      names = described_class.all_tools.map { |t| t[:name] }
+      expect(names).to include("knowledge")
+    end
+
   end
 
-  describe "security policy enforcement in call_func" do
-    it "returns error message to LLM when method is blocked" do
-      Mana.config.security = :strict
+  describe ".knowledge" do
+    it "returns content for known topics" do
+      %w[memory tools execution overview functions backends configuration].each do |topic|
+        result = described_class.knowledge(topic)
+        expect(result).to be_a(String)
+        expect(result).to include("[source: mana]")
+      end
+    end
+
+    it "matches partial topic names" do
+      result = described_class.knowledge("mem")
+      expect(result).to include("memory")
+    end
+
+    it "returns ri docs for Ruby classes" do
+      result = described_class.knowledge("Array#push")
+      expect(result).to include("[source: ri (Ruby official docs)]")
+    end
+  end
+
+  describe "knowledge tool execution" do
+    it "handles knowledge tool call" do
       stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "eval" } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
+        [{ type: "tool_use", id: "t1", name: "knowledge", input: { "topic" => "memory" } }],
+        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "answered" } }]
       )
 
       b = binding
-      # Should not crash — error goes back to LLM as tool_result
-      result = Mana::Engine.run("try eval", b)
-      expect(result).to eq("ok")
+      result = Mana::Engine.run("where is your memory stored?", b)
+      expect(result).to eq("answered")
     end
+  end
 
-    it "returns error for blocked receiver call" do
-      Mana.config.security = :strict
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "File.read", "args" => ["/etc/passwd"] } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "blocked" } }]
-      )
-
-      b = binding
-      result = Mana::Engine.run("read file", b)
-      expect(result).to eq("blocked")
-    end
-
-    it "returns error for unknown constant in chained call" do
+  describe "call_func with unknown constant in chained call" do
+    it "returns error for unknown constant" do
       stub_anthropic_sequence(
         [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "NonExistent.foo" } }],
         [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]

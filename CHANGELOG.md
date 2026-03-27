@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.10] - 2026-03-27
+
+### Added
+- `Mana.chat` — interactive REPL mode with streaming output and colored prompts
+- `think` tool — LLM can plan approach before acting on complex tasks
+- Streaming support for Anthropic backend (`chat_stream` with SSE parsing)
+- Agent behavior guidelines in system prompt (think → read → act → verify)
+
+## [0.5.9] - 2026-03-27
+
+### Added
+- `error` tool — LLM can signal task failure, raised as `Mana::LLMError` to the Ruby caller
+- Text-only LLM responses (after nudge) now raise `LLMError` instead of returning `nil`
+
+## [0.5.8] - 2026-03-27
+
+### Added
+- `local_variables` support — LLM can call `local_variables` via `call_func` to discover variables in scope (binding-routed for correct scoping)
+
 ## [0.5.7] - 2026-03-27
 
 ### Security

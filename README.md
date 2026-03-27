@@ -245,7 +245,6 @@ export MANA_MODEL=claude-sonnet-4-6                  # default model
 export MANA_VERBOSE=true                             # show LLM interactions
 export MANA_TIMEOUT=120                              # HTTP timeout in seconds
 export MANA_BACKEND=anthropic                        # force backend (anthropic/openai)
-export MANA_SECURITY=standard                        # security level (0-4 or name)
 ```
 
 | Environment Variable | Config | Default | Description |
@@ -258,7 +257,6 @@ export MANA_SECURITY=standard                        # security level (0-4 or na
 | `MANA_VERBOSE` | `c.verbose` | `false` | Log LLM calls to stderr |
 | `MANA_TIMEOUT` | `c.timeout` | `120` | HTTP timeout (seconds) |
 | `MANA_BACKEND` | `c.backend` | auto-detect | Force `anthropic` or `openai` |
-| `MANA_SECURITY` | `c.security` | `:standard` (2) | Security level: `sandbox`, `strict`, `standard`, `permissive`, `danger` |
 
 Programmatic config (overrides env vars):
 
@@ -269,7 +267,6 @@ Mana.configure do |c|
   c.api_key = "sk-..."
   c.verbose = true
   c.timeout = 120
-  c.security = :strict            # security level (0-4 or symbol)
 
   # Memory settings
   c.namespace = "my-project"      # nil = auto-detect from git/pwd
@@ -278,37 +275,6 @@ Mana.configure do |c|
   c.memory_keep_recent = 4        # keep last 4 rounds during compaction
   c.compact_model = nil           # nil = use main model for compaction
   c.memory_store = Mana::FileStore.new  # default file-based persistence
-end
-```
-
-### Security policy
-
-Mana restricts what the LLM can call via security levels (higher = more permissions):
-
-| Level | Name | What LLM Can Do | What's Blocked |
-|-------|------|-----------------|----------------|
-| 0 | `:sandbox` | Read/write variables, call user-defined functions only | Everything else |
-| 1 | `:strict` | + safe stdlib (`Time.now`, `Date.today`, `Math.*`) | Filesystem, network, system calls, eval |
-| **2** | **`:standard`** (default) | + read filesystem (`File.read`, `Dir.glob`) | Write/delete files, network, eval |
-| 3 | `:permissive` | + write files, network, require | eval, system/exec/fork |
-| 4 | `:danger` | No restrictions | Nothing |
-
-Default is **level 2 (`:standard`)**. Set via config or env var:
-
-```ruby
-Mana.configure { |c| c.security = :standard }
-# or
-Mana.configure { |c| c.security = 2 }
-```
-
-Fine-grained overrides:
-
-```ruby
-Mana.configure do |c|
-  c.security = :strict
-  c.security.allow_receiver "File", only: %w[read exist?]
-  c.security.block_method "puts"
-  c.security.block_receiver "Net::HTTP"
 end
 ```
 
@@ -399,13 +365,11 @@ Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the 
 
 3. **Build system prompt** — assembles rules, memory (short-term conversation + long-term facts + compaction summaries), variable values, and function signatures into a single system prompt.
 
-4. **LLM tool-calling loop** — sends prompt to the LLM with built-in tools (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `remember`, `done`). The LLM responds with tool calls, Mana executes them against the live Ruby binding, and sends results back. This loops until `done` is called or no more tool calls are returned.
+4. **LLM tool-calling loop** — sends prompt to the LLM with built-in tools (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`, `error`, `eval`, `think`, `knowledge`, `remember`). The LLM responds with tool calls, Mana executes them against the live Ruby binding, and sends results back. This loops until `done` is called or no more tool calls are returned.
 
-5. **Security enforcement** — each `call_func` is checked against the security policy. Blocked methods/receivers return an error message to the LLM instead of executing.
+5. **Return value** — single `write_var` returns the value directly; multiple writes return a Hash. On Ruby 4.0+, a singleton method fallback ensures variables are accessible in the caller's scope.
 
-6. **Return value** — single `write_var` returns the value directly; multiple writes return a Hash. On Ruby 4.0+, a singleton method fallback ensures variables are accessible in the caller's scope.
-
-7. **Background compaction** — if short-term memory exceeds the token pressure threshold, old messages are summarized by the LLM in a background thread and replaced with a compact summary.
+6. **Background compaction** — if short-term memory exceeds the token pressure threshold, old messages are summarized by the LLM in a background thread and replaced with a compact summary.
 
 
 ## License

@@ -108,7 +108,6 @@
     <div class="lk">
       <a href="#features">Features</a>
       <a href="#examples">Examples</a>
-      <a href="#security">Security</a>
       <a href="https://github.com/twokidsCarl/ruby-mana">GitHub</a>
       <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a>
     </div>
@@ -122,7 +121,7 @@
   <h1>ruby-<span class="m">mana</span> 🔮</h1>
   <p class="tl">Embed LLM as native Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
-  <p class="sub" style="margin-top:8px;font-size:.95rem;color:var(--dim)">Ruby 3.3+ gem that embeds LLM as a native language construct. 5 security levels. MIT licensed.</p>
+  <p class="sub" style="margin-top:8px;font-size:.95rem;color:var(--dim)">Ruby 3.3+ gem that embeds LLM as a native language construct. MIT licensed.</p>
 
   <div class="carousel" id="heroCarousel">
     <div class="slide active">
@@ -361,60 +360,6 @@ puts Mana.source(<span class="str">:slugify</span>)     <span class="cmt"># view
 
 <span class="cmt"># LLM calls find_users, then notify for each — all discovered from source</span></pre>
   </div>
-</section>
-
-<!-- Security -->
-<section id="security">
-  <h2>Security policy</h2>
-  <p class="lead">5 levels control what the LLM can call. Higher number = more permissions.</p>
-
-  <div style="margin-bottom:24px;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
-    <!-- Header -->
-    <div style="background:var(--bd);padding:10px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:.85rem;font-weight:700;color:var(--dim)">
-      <div>Level</div>
-      <div style="color:var(--gr)">Allowed</div>
-      <div style="color:#f85149">Blocked</div>
-    </div>
-    <!-- Level 0 -->
-    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd)">
-      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">0</span><strong><code>:sandbox</code></strong></div>
-      <div style="color:var(--gr)">Variables, user functions</div>
-      <div style="color:#f85149">Everything else</div>
-    </div>
-    <!-- Level 1 -->
-    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd)">
-      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">1</span><strong><code>:strict</code></strong></div>
-      <div style="color:var(--gr)">+ Time, Date, Math</div>
-      <div style="color:#f85149">File, Dir, IO, network, eval, exec</div>
-    </div>
-    <!-- Level 2 (default) -->
-    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd);border-left:3px solid var(--ac)">
-      <div><span class="sn" style="display:inline-flex;margin-right:8px">2</span><strong style="color:var(--ac)"><code>:standard</code></strong> <span style="font-size:.75rem;color:var(--ac)">default</span></div>
-      <div style="color:var(--gr)">+ File.read, Dir.glob</div>
-      <div style="color:#f85149">File.write, File.delete, network, eval, exec</div>
-    </div>
-    <!-- Level 3 -->
-    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--bd)">
-      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">3</span><strong><code>:permissive</code></strong></div>
-      <div style="color:var(--gr)">+ write files, network, require</div>
-      <div style="color:#f85149">eval, exec, fork, spawn</div>
-    </div>
-    <!-- Level 4 -->
-    <div style="background:var(--sf);padding:12px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center">
-      <div><span class="sn" style="background:var(--bd);color:var(--dim);display:inline-flex;margin-right:8px">4</span><strong><code>:danger</code></strong></div>
-      <div style="color:var(--gr)">Everything allowed</div>
-      <div style="color:#f85149">Nothing blocked</div>
-    </div>
-  </div>
-
-<pre>Mana.configure <span class="kw">do</span> |c|
-  c.security = <span class="str">:standard</span>            <span class="cmt"># or c.security = 2</span>
-
-  <span class="cmt"># Fine-grained overrides</span>
-  c.security.allow_receiver <span class="str">"File"</span>, only: %w[read exist?]
-  c.security.block_receiver <span class="str">"Net::HTTP"</span>
-  c.security.block_method <span class="str">"puts"</span>
-<span class="kw">end</span></pre>
 </section>
 
 <!-- Docs link -->
