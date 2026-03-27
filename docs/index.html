@@ -190,8 +190,12 @@ nums = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="s
     </div>
     <div>
       <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;">numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
+<pre style="border:none;margin:0;background:none;"><span class="kw">require</span> <span class="str">"mana"</span>
+
+numbers = [<span class="num">1</span>, <span class="str">"2"</span>, <span class="str">"three"</span>, <span class="str">"cuatro"</span>, <span class="str">"五"</span>]
+
 <span class="ms">~"compute the semantic average of &lt;numbers&gt;, store in &lt;result&gt;"</span>
+
 result  <span class="cmt"># =&gt; 3.0</span></pre>
     </div>
   </div>
@@ -210,9 +214,14 @@ email.priority = data[<span class="str">"priority"</span>]</pre>
     </div>
     <div>
       <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;"><span class="ms">~"read &lt;email&gt; subject, set its category and priority"</span>
+<pre style="border:none;margin:0;background:none;"><span class="kw">require</span> <span class="str">"mana"</span>
 
-<span class="cmt"># That's it. email.category and email.priority are set.</span></pre>
+email = Email.new(<span class="str">"URGENT: Server down"</span>)
+
+<span class="ms">~"read &lt;email&gt; subject, set its category and priority"</span>
+
+email.category  <span class="cmt"># =&gt; "infrastructure"</span>
+email.priority  <span class="cmt"># =&gt; "critical"</span></pre>
     </div>
   </div>
 
@@ -229,10 +238,14 @@ File.write(<span class="str">"fibonacci.rb"</span>, code)
     </div>
     <div>
       <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;"><span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
+<pre style="border:none;margin:0;background:none;"><span class="kw">require</span> <span class="str">"mana"</span>
+
+<span class="kw">mana def</span> <span class="fn">fibonacci</span>(n)
   <span class="ms">~"return an array of the first n Fibonacci numbers"</span>
 <span class="kw">end</span>
-fibonacci(<span class="num">10</span>)  <span class="cmt"># generated once → cached → pure Ruby</span></pre>
+
+fibonacci(<span class="num">10</span>)  <span class="cmt"># first call → LLM generates → cached</span>
+fibonacci(<span class="num">20</span>)  <span class="cmt"># second call → pure Ruby, zero API cost</span></pre>
     </div>
   </div>
 
@@ -243,18 +256,24 @@ fibonacci(<span class="num">10</span>)  <span class="cmt"># generated once → c
 <pre style="border:none;margin:0;background:none;">tools = [{
   name: <span class="str">"fetch_price"</span>,
   description: <span class="str">"Get stock price"</span>,
-  parameters: { symbol: { type: <span class="str">"string"</span> } }
+  parameters: {symbol: {type: <span class="str">"string"</span>}}
 }]
 response = client.chat(prompt, tools: tools)
 <span class="cmt"># parse tool_calls, dispatch manually...</span></pre>
     </div>
     <div>
       <h3>ruby-mana</h3>
-<pre style="border:none;margin:0;background:none;"><span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
+<pre style="border:none;margin:0;background:none;"><span class="kw">require</span> <span class="str">"mana"</span>
+
+<span class="kw">def</span> <span class="fn">fetch_price</span>(symbol)
   { <span class="str">"AAPL"</span> =&gt; <span class="num">189.5</span>, <span class="str">"TSLA"</span> =&gt; <span class="num">248.9</span> }[symbol]
 <span class="kw">end</span>
+
+portfolio = [<span class="str">"AAPL"</span>, <span class="str">"TSLA"</span>]
+
 <span class="ms">~"call fetch_price for each in &lt;portfolio&gt;, sum into &lt;total&gt;"</span>
-<span class="cmt"># LLM discovers fetch_price from your source code</span></pre>
+
+puts total  <span class="cmt"># =&gt; 438.4</span></pre>
     </div>
   </div>
 </section>
@@ -289,12 +308,12 @@ response = client.chat(prompt, tools: tools)
   <div class="ex">
     <h3>Semantic computation</h3>
     <p>LLM understands meaning across types, languages, and messy real-world data.</p>
-<pre>reviews = [<span class="str">"amazing product!"</span>, <span class="str">"terrible, broke in 2 days"</span>, <span class="str">"it's okay I guess"</span>, <span class="str">"最高！"</span>]
+<pre>reviews = [<span class="str">"love it!"</span>, <span class="str">"broke in 2 days"</span>, <span class="str">"最高！"</span>]
 
-<span class="ms">~"analyze sentiment of each &lt;reviews&gt;, store scores in &lt;sentiments&gt; and overall in &lt;summary&gt;"</span>
+<span class="ms">~"score sentiment of &lt;reviews&gt;, store in &lt;scores&gt; and &lt;summary&gt;"</span>
 
-puts sentiments  <span class="cmt"># =&gt; [0.9, -0.8, 0.1, 0.95]</span>
-puts summary     <span class="cmt"># =&gt; "Generally positive (3/4), one strongly negative"</span></pre>
+puts scores   <span class="cmt"># =&gt; [0.9, -0.8, 0.95]</span>
+puts summary  <span class="cmt"># =&gt; "Mostly positive, one negative"</span></pre>
   </div>
 
   <div class="ex">
@@ -319,10 +338,10 @@ puts task.assignee  <span class="cmt"># =&gt; "senior backend engineer"</span></
   <span class="ms">~"convert title to a URL-safe slug: lowercase, hyphens, no special chars"</span>
 <span class="kw">end</span>
 
-slugify(<span class="str">"Hello, World! 你好"</span>)  <span class="cmt"># first call → LLM generates → cached</span>
-slugify(<span class="str">"Another Post"</span>)        <span class="cmt"># second call → pure Ruby, zero API cost</span>
+slugify(<span class="str">"Hello, World! 你好"</span>)   <span class="cmt"># first call → LLM generates → cached</span>
+slugify(<span class="str">"Another Post"</span>)         <span class="cmt"># second call → pure Ruby, zero API cost</span>
 
-puts Mana.source(<span class="str">:slugify</span>)    <span class="cmt"># view the generated code</span></pre>
+puts Mana.source(<span class="str">:slugify</span>)     <span class="cmt"># view the generated code</span></pre>
   </div>
 
   <div class="ex">
@@ -338,7 +357,9 @@ puts Mana.source(<span class="str">:slugify</span>)    <span class="cmt"># view 
   Mailer.send(user_id, message)
 <span class="kw">end</span>
 
-<span class="ms">~"find users named 'Alice', notify each about the maintenance window tomorrow"</span></pre>
+<span class="ms">~"find users named 'Alice', notify each about the maintenance window tomorrow"</span>
+
+<span class="cmt"># LLM calls find_users, then notify for each — all discovered from source</span></pre>
   </div>
 </section>
 
@@ -347,26 +368,31 @@ puts Mana.source(<span class="str">:slugify</span>)    <span class="cmt"># view 
   <h2>Security policy</h2>
   <p class="lead">5 levels control what the LLM can call. Higher number = more permissions.</p>
 
-  <div class="steps" style="margin-bottom:24px">
-    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:8px">
+  <div style="margin-bottom:24px">
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
       <div class="sn" style="background:var(--bd);color:var(--dim)">0</div>
-      <div class="st"><strong><code>:sandbox</code></strong> — Variables and user-defined functions only. Everything else blocked.</div>
+      <div><strong><code>:sandbox</code></strong><br><span style="color:var(--gr);font-size:.85rem">variables, user functions</span></div>
+      <div><span style="color:#f85149;font-size:.85rem">everything else blocked</span></div>
     </div>
-    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:8px">
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
       <div class="sn" style="background:var(--bd);color:var(--dim)">1</div>
-      <div class="st"><strong><code>:strict</code></strong> — + safe stdlib: <code>Time.now</code>, <code>Date.today</code>, <code>Math.*</code></div>
+      <div><strong><code>:strict</code></strong><br><span style="color:var(--gr);font-size:.85rem">+ <code>Time</code>, <code>Date</code>, <code>Math</code></span></div>
+      <div><span style="color:#f85149;font-size:.85rem">File, Dir, IO, network, eval, exec</span></div>
     </div>
-    <div class="step" style="background:var(--sf);border:2px solid var(--ac);border-radius:8px;padding:16px;margin-bottom:8px">
+    <div style="background:var(--sf);border:2px solid var(--ac);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
       <div class="sn">2</div>
-      <div class="st"><strong style="color:var(--ac)"><code>:standard</code> (default)</strong> — + read filesystem: <code>File.read</code>, <code>Dir.glob</code>. Write/delete still blocked.</div>
+      <div><strong style="color:var(--ac)"><code>:standard</code></strong> <span style="font-size:.8rem;color:var(--ac)">(default)</span><br><span style="color:var(--gr);font-size:.85rem">+ <code>File.read</code>, <code>Dir.glob</code></span></div>
+      <div><span style="color:#f85149;font-size:.85rem">File.write, File.delete, network, eval, exec</span></div>
     </div>
-    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:8px">
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;margin-bottom:8px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
       <div class="sn" style="background:var(--bd);color:var(--dim)">3</div>
-      <div class="st"><strong><code>:permissive</code></strong> — + write files, network, require. Only eval/exec/fork blocked.</div>
+      <div><strong><code>:permissive</code></strong><br><span style="color:var(--gr);font-size:.85rem">+ write files, network, require</span></div>
+      <div><span style="color:#f85149;font-size:.85rem">eval, exec, fork, spawn</span></div>
     </div>
-    <div class="step" style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px">
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:16px 20px;display:grid;grid-template-columns:40px 1fr 1fr;gap:12px;align-items:start">
       <div class="sn" style="background:var(--bd);color:var(--dim)">4</div>
-      <div class="st"><strong><code>:danger</code></strong> — No restrictions. Use only in fully trusted environments.</div>
+      <div><strong><code>:danger</code></strong><br><span style="color:var(--gr);font-size:.85rem">everything allowed</span></div>
+      <div><span style="color:#f85149;font-size:.85rem">nothing blocked</span></div>
     </div>
   </div>
 
