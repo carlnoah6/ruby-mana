@@ -85,11 +85,9 @@ module Mana
     rescue LLMError
       # LLMError must propagate to the caller (e.g. from the error tool)
       raise
-    rescue SyntaxError => e
-      # Catch syntax errors from body eval so the LLM can retry with corrected code
-      "error: #{e.class}: #{e.message}"
-    rescue => e
-      # Return errors as strings so the LLM can see and react to them
+    rescue ScriptError, StandardError => e
+      # ScriptError covers SyntaxError, LoadError, NotImplementedError
+      # StandardError covers everything else (NameError, TypeError, etc.)
       "error: #{e.class}: #{e.message}"
     end
 
