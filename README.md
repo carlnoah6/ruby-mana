@@ -371,13 +371,41 @@ Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the 
 
 ## How it works
 
-1. `~"..."` calls `String#~@`, which captures the caller's `Binding`
-2. Mana parses `<var>` references and reads existing variables as context
-3. Memory loads long-term facts and prior conversation into the system prompt
-4. The prompt + context is sent to the LLM with tools: `read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `remember`, `done`
-5. LLM responds with tool calls → Mana executes them against the live Ruby binding → sends results back
-6. Loop until LLM calls `done` or returns without tool calls
-7. After completion, memory compaction runs in background if context is getting large
+```
+  Your Ruby code                        LLM (Claude/GPT/...)
+  ─────────────                         ────────────────────
+  numbers = [1, 2, 3]
+  ~"average of <numbers>,          ──→  system prompt:
+    store in <result>"                    - rules + tools
+                                          - memory (short/long-term)
+                                          - variables: numbers = [1,2,3]
+                                          - available functions
+
+                                    ←──  tool_call: read_var("numbers")
+  return [1, 2, 3]                 ──→
+
+                                    ←──  tool_call: write_var("result", 2.0)
+  binding.local_variable_set       ──→   ok
+
+                                    ←──  tool_call: done(result: 2.0)
+  result == 2.0 ✓
+```
+
+**Step by step:**
+
+1. **`~"..."` triggers `String#~@`** — captures the caller's `Binding` via `binding_of_caller`, giving Mana access to local variables, methods, and objects in scope.
+
+2. **Build context** — parses `<var>` references from the prompt, reads their current values, discovers available functions via Prism AST (with YARD descriptions if present).
+
+3. **Build system prompt** — assembles rules, memory (short-term conversation + long-term facts + compaction summaries), variable values, and function signatures into a single system prompt.
+
+4. **LLM tool-calling loop** — sends prompt to the LLM with built-in tools (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `remember`, `done`). The LLM responds with tool calls, Mana executes them against the live Ruby binding, and sends results back. This loops until `done` is called or no more tool calls are returned.
+
+5. **Security enforcement** — each `call_func` is checked against the security policy. Blocked methods/receivers return an error message to the LLM instead of executing.
+
+6. **Return value** — single `write_var` returns the value directly; multiple writes return a Hash. On Ruby 4.0+, a singleton method fallback ensures variables are accessible in the caller's scope.
+
+7. **Background compaction** — if short-term memory exceeds the token pressure threshold, old messages are summarized by the LLM in a background thread and replaced with a compact summary.
 
 
 ## License
