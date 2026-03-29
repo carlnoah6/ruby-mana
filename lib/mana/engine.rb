@@ -148,9 +148,11 @@ module Mana
         tools
       end
 
-      # Query the runtime knowledge base
+      # Query the runtime knowledge base.
+      # Uses config.knowledge_provider if set, otherwise Mana::Knowledge.
       def knowledge(topic)
-        Mana::Knowledge.query(topic)
+        provider = Mana.config.knowledge_provider || Mana::Knowledge
+        provider.query(topic)
       end
     end
 

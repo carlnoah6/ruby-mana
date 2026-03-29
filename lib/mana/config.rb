@@ -13,7 +13,8 @@ module Mana
     attr_accessor :model, :temperature, :api_key, :max_iterations, :base_url,
                   :backend, :verbose,
                   :namespace, :memory_store, :memory_path,
-                  :context_window
+                  :context_window,
+                  :memory_class, :knowledge_provider
     attr_reader :timeout
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
@@ -36,6 +37,8 @@ module Mana
       @memory_store = nil
       @memory_path = nil
       @context_window = 128_000
+      @memory_class = nil          # nil = use Mana::Memory; set to custom class (e.g. Claw::Memory)
+      @knowledge_provider = nil    # nil = use Mana::Knowledge; set to custom module with .query(topic)
     end
 
     # Set timeout; must be a positive number

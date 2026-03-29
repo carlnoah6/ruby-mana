@@ -17,11 +17,15 @@ module Mana
 
     class << self
       # Return the current thread's memory instance (lazy-initialized).
+      # Uses config.memory_class if set (e.g. Claw::Memory), otherwise Mana::Memory.
       # Returns nil in incognito mode.
       def current
         return nil if incognito?
 
-        Thread.current[:mana_memory] ||= new
+        Thread.current[:mana_memory] ||= begin
+          klass = Mana.config.memory_class || self
+          klass.new
+        end
       end
 
       # Check if the current thread is in incognito mode (no memory)
