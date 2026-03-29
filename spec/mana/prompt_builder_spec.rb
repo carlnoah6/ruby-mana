@@ -134,5 +134,17 @@ RSpec.describe Mana::PromptBuilder do
       expect(prompt).not_to include("Previous conversation summary:")
       expect(prompt).not_to include("Long-term memories")
     end
+
+    it "injects all long-term memories" do
+      memory = Mana.memory
+      3.times { |i| memory.remember("fact #{i}") }
+
+      b = binding
+      engine = Mana::Engine.new(b)
+      prompt = engine.send(:build_system_prompt, {})
+      expect(prompt).to include("fact 0")
+      expect(prompt).to include("fact 1")
+      expect(prompt).to include("fact 2")
+    end
   end
 end

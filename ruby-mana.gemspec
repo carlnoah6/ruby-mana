@@ -17,13 +17,10 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.3"
 
-  s.files = Dir["lib/**/*.rb"] + Dir["exe/*"] + Dir["*.md"] + ["LICENSE"]
-  s.bindir = "exe"
-  s.executables = ["mana"]
+  s.files = Dir["lib/**/*.rb"] + Dir["*.md"] + ["LICENSE"]
   s.require_paths = ["lib"]
 
   s.add_dependency "binding_of_caller", ">= 1.0"
-  s.add_dependency "reline", ">= 0.5"
   s.add_dependency "dotenv", ">= 2.0"
 
   s.metadata = {

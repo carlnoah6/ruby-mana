@@ -136,8 +136,6 @@ module Mana
             Namespace is auto-detected from the git repo name, Gemfile directory, or cwd.
             Configurable via: Mana.configure { |c| c.memory_path = "/custom/path" }
             Or provide a custom MemoryStore subclass for Redis, DB, etc.
-          - Background compaction: when short-term memory exceeds the token pressure threshold
-            (currently #{Mana.config.memory_pressure}), old messages are summarized in a background thread.
           - Incognito mode: Mana.incognito { ~"..." } disables all memory.
           The LLM can store facts via the `remember` tool. These persist across script executions.
         TEXT
@@ -166,8 +164,6 @@ module Mana
           - timeout: #{c.timeout}s
           - max_iterations: #{c.max_iterations}
           - context_window: #{c.context_window}
-          - memory_pressure: #{c.memory_pressure}
-          - memory_keep_recent: #{c.memory_keep_recent}
           - verbose: #{c.verbose}
           All options can be set via Mana.configure { |c| ... } or environment variables
           (MANA_MODEL, MANA_BACKEND, MANA_TIMEOUT, MANA_VERBOSE, ANTHROPIC_API_KEY, OPENAI_API_KEY).

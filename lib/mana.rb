@@ -17,7 +17,6 @@ require_relative "mana/introspect"
 require_relative "mana/compiler"
 require_relative "mana/string_ext"
 require_relative "mana/mixin"
-require_relative "mana/chat"
 
 module Mana
   class Error < StandardError; end
@@ -70,10 +69,6 @@ module Mana
       Compiler.cache_dir = dir
     end
 
-    # Enter interactive chat mode. Mana will have access to the caller's binding.
-    def chat
-      Chat.start(binding.of_caller(1))
-    end
   end
 end
 

@@ -30,20 +30,8 @@ RSpec.describe Mana::Config do
       expect(config.base_url).to be_nil unless ENV["ANTHROPIC_API_URL"] || ENV["OPENAI_API_URL"]
     end
 
-    it "sets memory_pressure to 0.7" do
-      expect(config.memory_pressure).to eq(0.7)
-    end
-
-    it "sets memory_keep_recent to 4" do
-      expect(config.memory_keep_recent).to eq(4)
-    end
-
     it "defaults namespace to nil" do
       expect(config.namespace).to be_nil
-    end
-
-    it "defaults compact_model to nil" do
-      expect(config.compact_model).to be_nil
     end
   end
 
@@ -150,7 +138,6 @@ RSpec.describe Mana::Config do
       config.max_iterations = 10
       config.timeout = 60
       config.namespace = "my-app"
-      config.compact_model = "claude-haiku"
 
       expect(config.model).to eq("test-model")
       expect(config.temperature).to eq(0.5)
@@ -158,7 +145,6 @@ RSpec.describe Mana::Config do
       expect(config.max_iterations).to eq(10)
       expect(config.timeout).to eq(60)
       expect(config.namespace).to eq("my-app")
-      expect(config.compact_model).to eq("claude-haiku")
     end
   end
 

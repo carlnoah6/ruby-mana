@@ -385,58 +385,6 @@ RSpec.describe "Nested prompts" do
     end
   end
 
-  describe "compaction" do
-    it "does not schedule compaction for nested calls" do
-      compaction_called = false
-      allow_any_instance_of(Mana::Memory).to receive(:schedule_compaction) do
-        compaction_called = true
-      end
-
-      call_count = 0
-      stub_request(:post, "https://api.anthropic.com/v1/messages")
-        .to_return do
-          call_count += 1
-          if call_count == 1
-            {
-              status: 200,
-              headers: { "Content-Type" => "application/json" },
-              body: JSON.generate({
-                content: [{ type: "tool_use", id: "t1", name: "call_func", input: { "name" => "nested_func", "args" => [] } }]
-              })
-            }
-          elsif call_count == 2
-            # Inner: done — should NOT trigger compaction
-            compaction_called = false # reset before inner finishes
-            {
-              status: 200,
-              headers: { "Content-Type" => "application/json" },
-              body: JSON.generate({
-                content: [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "inner" } }]
-              })
-            }
-          else
-            # Outer: done — SHOULD trigger compaction
-            {
-              status: 200,
-              headers: { "Content-Type" => "application/json" },
-              body: JSON.generate({
-                content: [{ type: "tool_use", id: "t3", name: "done", input: { "result" => "outer" } }]
-              })
-            }
-          end
-        end
-
-      def nested_func
-        Mana::Engine.run("inner", binding)
-      end
-
-      b = binding
-      Mana::Engine.run("outer", b)
-      # Compaction should have been called for the outer (top-level) call
-      expect(compaction_called).to be true
-    end
-  end
-
   describe "incognito nesting" do
     it "nested call inside incognito does not create memory" do
       call_count = 0

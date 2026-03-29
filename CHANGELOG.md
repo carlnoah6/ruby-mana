@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.11] - 2026-03-27
+
+### Changed
+- Memory storage default path changed from `~/.mana/memory` to `{cwd}/.mana` (project-local)
+- Long-term memory injection uses keyword search when collection exceeds 20 memories
+
+### Added
+- Session persistence — short-term memory and summaries survive across restarts (`persist_session` config, default: true)
+- `Memory#save_session` / auto-load on init for session continuity
+- `Memory#search(query, top_k:)` — keyword-based fuzzy matching over long-term memories
+- `config.persist_session` (default: `true`) and `config.memory_top_k` (default: `10`) options
+- `MemoryStore#read_session` / `#write_session` abstract interface and `FileStore` implementation
+
 ## [0.5.10] - 2026-03-27
 
 ### Added

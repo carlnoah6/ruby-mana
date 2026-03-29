@@ -135,7 +135,7 @@ module Mana
 
       # User-defined classes/modules (skip Ruby internals)
       skip = [Object, Kernel, BasicObject, Module, Class, Mana, Mana::Engine,
-              Mana::Memory, Mana::Config, Mana::Chat]
+              Mana::Memory, Mana::Config]
       user_classes = ObjectSpace.each_object(Class)
         .reject { |c| c.name.nil? || c.name.start_with?("Mana::") || c.name.start_with?("#<") }
         .reject { |c| skip.include?(c) }
