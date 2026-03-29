@@ -9,13 +9,11 @@ module Mana
   #   base_url         - Custom API endpoint, falls back to ANTHROPIC_API_URL or OPENAI_API_URL
   #   backend          - :anthropic, :openai, or nil (auto-detect from model name)
   #   timeout          - HTTP timeout in seconds (default: 120)
-  #   memory_pressure  - Token ratio (0-1) that triggers memory compaction (default: 0.7)
   class Config
     attr_accessor :model, :temperature, :api_key, :max_iterations, :base_url,
                   :backend, :verbose,
                   :namespace, :memory_store, :memory_path,
-                  :context_window, :memory_pressure, :memory_keep_recent,
-                  :compact_model, :on_compact
+                  :context_window
     attr_reader :timeout
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
@@ -38,10 +36,6 @@ module Mana
       @memory_store = nil
       @memory_path = nil
       @context_window = 128_000
-      @memory_pressure = 0.7
-      @memory_keep_recent = 4
-      @compact_model = nil
-      @on_compact = nil
     end
 
     # Set timeout; must be a positive number

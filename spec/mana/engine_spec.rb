@@ -553,6 +553,8 @@ RSpec.describe Mana::Engine do
     end
 
     it "returns ri docs for Ruby classes" do
+      ri_output = `ri Array#push 2>/dev/null`.strip rescue ""
+      skip "ri docs not available" if ri_output.empty?
       result = described_class.knowledge("Array#push")
       expect(result).to include("[source: ri (Ruby official docs)]")
     end

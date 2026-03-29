@@ -192,15 +192,15 @@ Each nested call gets its own conversation context. The outer LLM only sees the 
 
 Mana has two types of memory:
 
-- **Short-term memory** — conversation history within the current process. Each `~"..."` call appends to it, so consecutive calls share context. Cleared when the process exits.
-- **Long-term memory** — persistent facts stored on disk (`~/.mana/`). Survives across script executions. The LLM can save facts via the `remember` tool.
+- **Short-term memory** — conversation history within the current process. Each `~"..."` call appends to it, so consecutive calls share context. Persisted to session files by default (survives restarts).
+- **Long-term memory** — persistent facts stored on disk (`.mana/` in your project directory). Survives across script executions. The LLM can save facts via the `remember` tool.
 
 ```ruby
 ~"translate <text1> to Japanese, store in <result1>"
 ~"translate <text2> to the same language, store in <result2>"   # remembers "Japanese"
 
 ~"remember that the user prefers concise output"
-# persists to ~/.mana/ — available in future script runs
+# persists to .mana/ — available in future script runs
 ```
 
 ```ruby
@@ -275,6 +275,8 @@ Mana.configure do |c|
   c.memory_keep_recent = 4        # keep last 4 rounds during compaction
   c.compact_model = nil           # nil = use main model for compaction
   c.memory_store = Mana::FileStore.new  # default file-based persistence
+  c.persist_session = true        # persist short-term memory across restarts
+  c.memory_top_k = 10             # max memories to inject when searching (> 20 memories)
 end
 ```
 

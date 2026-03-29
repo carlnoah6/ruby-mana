@@ -25,7 +25,7 @@ module Mana
 
 
   # Default file-based memory store. Persists memories as JSON files.
-  # Storage path resolution: explicit base_path > config.memory_path > XDG_DATA_HOME > OS default
+  # Storage path resolution: explicit base_path > config.memory_path > {cwd}/.mana
   class FileStore < MemoryStore
     # Optional base_path overrides default storage location
     def initialize(base_path = nil)
@@ -65,15 +65,15 @@ module Mana
     end
 
     # Resolve the base directory for memory storage.
-    # Priority: explicit base_path > config.memory_path > ~/.mana/memory
+    # Priority: explicit base_path > config.memory_path > {cwd}/.mana
     def base_dir
       return File.join(@base_path, "memory") if @base_path
 
       custom_path = Mana.config.memory_path
       return File.join(custom_path, "memory") if custom_path
 
-      # Default fallback
-      File.join(Dir.home, ".mana", "memory")
+      # Default fallback — project-local .mana directory
+      File.join(Dir.pwd, ".mana")
     end
   end
 end

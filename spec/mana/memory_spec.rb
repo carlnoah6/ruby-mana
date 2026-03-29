@@ -187,6 +187,13 @@ RSpec.describe Mana::Memory do
       data = store.read(File.basename(`git rev-parse --show-toplevel 2>/dev/null`.strip))
       expect(data).to be_empty
     end
+
+    it "does not raise with nonexistent id" do
+      memory = described_class.new
+      memory.remember("a fact")
+      expect { memory.forget(id: 999) }.not_to raise_error
+      expect(memory.long_term.size).to eq(1)
+    end
   end
 
   describe "#clear!" do
@@ -255,130 +262,6 @@ RSpec.describe Mana::Memory do
     end
   end
 
-  describe "#needs_compaction?" do
-    it "returns false when under threshold" do
-      memory = described_class.new
-      expect(memory.needs_compaction?).to be false
-    end
-  end
-
-  describe "#compact!" do
-    it "compacts old messages into a summary" do
-      # Stub the summarization API call
-      stub_request(:post, "https://api.anthropic.com/v1/messages")
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({
-            content: [{ type: "text", text: "Summary: user discussed testing." }]
-          })
-        )
-
-      memory = described_class.new
-      # Add enough rounds to trigger compaction
-      10.times do |i|
-        memory.short_term << { role: "user", content: "Message #{i} with some content to add tokens" }
-        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
-      end
-
-      # Force low threshold so compaction triggers
-      original_pressure = Mana.config.memory_pressure
-      Mana.config.memory_pressure = 0.0001
-      Mana.config.memory_keep_recent = 2
-
-      memory.compact!
-
-      expect(memory.summaries).not_to be_empty
-      # Should keep only the most recent rounds
-      user_msgs = memory.short_term.select { |m| m[:role] == "user" && m[:content].is_a?(String) }
-      expect(user_msgs.size).to be <= 2
-
-      Mana.config.memory_pressure = original_pressure
-    end
-  end
-
-  describe "#needs_compaction?" do
-    it "returns true when over threshold" do
-      memory = described_class.new
-      # Add lots of content to push token count high
-      20.times do |i|
-        memory.short_term << { role: "user", content: "A" * 1000 }
-        memory.short_term << { role: "assistant", content: [{ type: "text", text: "B" * 1000 }] }
-      end
-      # Very low threshold to guarantee trigger
-      Mana.config.memory_pressure = 0.0001
-      expect(memory.needs_compaction?).to be true
-    end
-  end
-
-  describe "#schedule_compaction" do
-    it "runs compaction in a background thread" do
-      stub_request(:post, "https://api.anthropic.com/v1/messages")
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({ content: [{ type: "text", text: "Background summary" }] })
-        )
-
-      memory = described_class.new
-      10.times do |i|
-        memory.short_term << { role: "user", content: "Message #{i} " + ("x" * 200) }
-        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
-      end
-
-      Mana.config.memory_pressure = 0.0001
-      Mana.config.memory_keep_recent = 2
-
-      memory.schedule_compaction
-      memory.wait_for_compaction
-
-      expect(memory.summaries).not_to be_empty
-    end
-  end
-
-  describe "on_compact callback" do
-    it "calls on_compact with the summary" do
-      stub_request(:post, "https://api.anthropic.com/v1/messages")
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({ content: [{ type: "text", text: "Callback summary" }] })
-        )
-
-      callback_result = nil
-      Mana.config.on_compact = ->(summary) { callback_result = summary }
-
-      memory = described_class.new
-      10.times do |i|
-        memory.short_term << { role: "user", content: "Message #{i} " + ("x" * 200) }
-        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
-      end
-
-      Mana.config.memory_pressure = 0.0001
-      Mana.config.memory_keep_recent = 2
-      memory.compact!
-
-      expect(callback_result).to eq("Callback summary")
-      Mana.config.on_compact = nil
-    end
-  end
-
-  describe "compaction edge cases" do
-    it "skips compaction when only tool_result messages exist (no user rounds)" do
-      memory = described_class.new
-      5.times do
-        memory.short_term << { role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: "ok" }] }
-        memory.short_term << { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "done", input: {} }] }
-      end
-
-      Mana.config.memory_pressure = 0.0001
-      Mana.config.memory_keep_recent = 1
-      # tool_result messages have Array content, not String — they don't count as user rounds
-      memory.compact!
-      expect(memory.summaries).to be_empty
-    end
-  end
-
   describe "#inspect" do
     it "returns human-readable representation" do
       memory = described_class.new
@@ -422,86 +305,6 @@ RSpec.describe Mana::Memory do
       memory = Mana.memory
       expect(memory.long_term.size).to eq(1)
       expect(memory.long_term.first[:content]).to eq("user prefers dark mode")
-    end
-  end
-
-  describe "compaction resilience" do
-    it "returns 'Summary unavailable' when backend fails during compaction" do
-      memory = described_class.new
-      # Stub the backend to raise an error
-      allow(Mana::Backends::Base).to receive(:for).and_raise(Mana::LLMError, "timeout")
-
-      result = memory.send(:summarize, "some conversation text")
-      expect(result).to eq("Summary unavailable")
-    end
-
-    it "forget with nonexistent id does not raise" do
-      memory = described_class.new
-      memory.remember("a fact")
-      expect { memory.forget(id: 999) }.not_to raise_error
-      expect(memory.long_term.size).to eq(1)
-    end
-  end
-
-  describe "compaction summary merging" do
-    it "merges old summaries into a single new summary instead of accumulating" do
-      stub_request(:post, "https://api.anthropic.com/v1/messages")
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({ content: [{ type: "text", text: "Merged summary" }] })
-        )
-
-      memory = described_class.new
-      # Seed with an existing summary
-      memory.summaries << "Old summary from previous compaction"
-
-      10.times do |i|
-        memory.short_term << { role: "user", content: "Message #{i} " + ("x" * 200) }
-        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Response #{i}" }] }
-      end
-
-      Mana.config.memory_pressure = 0.0001
-      Mana.config.memory_keep_recent = 2
-      memory.compact!
-
-      # Should have exactly 1 summary, not 2 (old one was merged)
-      expect(memory.summaries.size).to eq(1)
-      expect(memory.summaries.first).to eq("Merged summary")
-    end
-  end
-
-  describe "compaction summary budget" do
-    it "calculates max_summary_tokens from threshold minus keep_tokens" do
-      memory = described_class.new
-
-      Mana.config.context_window = 1000
-      Mana.config.memory_pressure = 0.5  # threshold = 500
-
-      # Add messages so keep_recent has ~100 tokens
-      8.times do |i|
-        memory.short_term << { role: "user", content: "Msg #{i} " + ("y" * 100) }
-        memory.short_term << { role: "assistant", content: [{ type: "text", text: "Resp #{i}" }] }
-      end
-
-      Mana.config.memory_keep_recent = 2
-
-      # Capture the max_tokens passed to the backend
-      captured_max_tokens = nil
-      fake_backend = double("backend")
-      allow(Mana::Backends::Base).to receive(:for).and_return(fake_backend)
-      allow(fake_backend).to receive(:chat) do |**kwargs|
-        captured_max_tokens = kwargs[:max_tokens]
-        [{ type: "text", text: "Budget summary" }]
-      end
-
-      memory.compact!
-
-      # Budget should be roughly half of (threshold - keep_tokens), clamped 64..1024
-      expect(captured_max_tokens).to be >= 64
-      expect(captured_max_tokens).to be <= 1024
-      # With threshold=500 and keep_tokens ~60, budget ≈ (500-60)*0.5 ≈ 220
-      expect(captured_max_tokens).to be < 500  # definitely not the full threshold
     end
   end
 end

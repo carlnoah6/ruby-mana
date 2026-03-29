@@ -186,8 +186,6 @@ module Mana
       system_prompt = build_system_prompt(context)
 
       memory = @incognito ? nil : Memory.current
-      # Wait for any in-progress background compaction before reading messages
-      memory&.wait_for_compaction
 
       messages = memory ? memory.short_term : []
 
@@ -271,9 +269,6 @@ module Mana
       if memory && done_result
         messages << { role: "assistant", content: [{ type: "text", text: "Done: #{done_result}" }] }
       end
-
-      # Schedule compaction if needed (runs in background, skip for nested)
-      memory&.schedule_compaction unless nested
 
       # Return written variables so Ruby 4.0+ users can capture them:
       #   result = ~"compute average and store in <result>"

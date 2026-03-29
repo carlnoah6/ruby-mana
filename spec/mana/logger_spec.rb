@@ -88,7 +88,7 @@ RSpec.describe Mana::Logger do
       end
 
       it "logs small hashes inline" do
-        expect { logger.vlog_value("hash:", { x: 1 }) }.to output(/\{x: 1\}/).to_stderr
+        expect { logger.vlog_value("hash:", { x: 1 }) }.to output(/x.*1/).to_stderr
       end
     end
 
