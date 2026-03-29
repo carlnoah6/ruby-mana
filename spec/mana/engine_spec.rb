@@ -552,7 +552,7 @@ RSpec.describe Mana::Engine do
       expect(result).to include("memory")
     end
 
-    it "returns ri docs for Ruby classes" do
+    it "returns ri docs for Ruby classes", if: -> { system("ri --version > /dev/null 2>&1") } do
       result = described_class.knowledge("Array#push")
       expect(result).to include("[source: ri (Ruby official docs)]")
     end

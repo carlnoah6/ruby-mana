@@ -3,6 +3,11 @@
 require "spec_helper"
 
 RSpec.describe Mana::Knowledge do
+  # ri may not be available in CI environments
+  def ri_available?
+    system("ri --version > /dev/null 2>&1")
+  end
+
   before do
     Mana.config.api_key = "test-key"
   end
@@ -36,7 +41,7 @@ RSpec.describe Mana::Knowledge do
       end
     end
 
-    context "ri documentation" do
+    context "ri documentation", if: -> { system("ri --version > /dev/null 2>&1") } do
       it "returns ri docs for 'Array#map'" do
         result = described_class.query("Array#map")
         expect(result).to start_with("[source: ri (Ruby official docs)]")
@@ -81,7 +86,7 @@ RSpec.describe Mana::Knowledge do
       expect(described_class.query("ruby")).to start_with("[source: ruby runtime]")
     end
 
-    it "labels ri docs" do
+    it "labels ri docs", if: -> { system("ri --version > /dev/null 2>&1") } do
       result = described_class.query("Hash#merge")
       expect(result).to start_with("[source: ri (Ruby official docs)]")
     end
