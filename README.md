@@ -2,6 +2,8 @@
 
 [![Gem Version](https://badge.fury.io/rb/ruby-mana.svg)](https://rubygems.org/gems/ruby-mana) · [Website](https://twokidscarl.github.io/ruby-mana/) · [RubyGems](https://rubygems.org/gems/ruby-mana) · [GitHub](https://github.com/twokidsCarl/ruby-mana)
 
+**Looking for interactive chat, persistent memory, and agent features?** See [ruby-claw](https://github.com/twokidsCarl/ruby-claw).
+
 Embed LLM as native Ruby. Write natural language, it just runs. Not an API wrapper — a language construct that weaves LLM into your code.
 
 ```ruby
@@ -188,51 +190,6 @@ lint = ->(code) { ~"check #{code} for style issues, store in <issues>" }
 
 Each nested call gets its own conversation context. The outer LLM only sees the function's return value, keeping its context clean.
 
-### Memory
-
-Mana has two types of memory:
-
-- **Short-term memory** — conversation history within the current process. Each `~"..."` call appends to it, so consecutive calls share context. Persisted to session files by default (survives restarts).
-- **Long-term memory** — persistent facts stored on disk (`.mana/` in your project directory). Survives across script executions. The LLM can save facts via the `remember` tool.
-
-```ruby
-~"translate <text1> to Japanese, store in <result1>"
-~"translate <text2> to the same language, store in <result2>"   # remembers "Japanese"
-
-~"remember that the user prefers concise output"
-# persists to .mana/ — available in future script runs
-```
-
-```ruby
-Mana.memory.short_term         # view conversation history
-Mana.memory.long_term          # view persisted facts
-Mana.memory.forget(id: 2)     # remove a specific fact
-Mana.memory.clear!             # clear everything
-```
-
-#### Compaction
-
-When conversation history grows large, Mana automatically compacts old messages into summaries:
-
-```ruby
-Mana.configure do |c|
-  c.memory_pressure = 0.7       # compact when tokens > 70% of context window
-  c.memory_keep_recent = 4      # keep last 4 rounds, summarize the rest
-  c.compact_model = nil          # nil = use main model for summarization
-  c.on_compact = ->(summary) { puts "Compacted: #{summary}" }
-end
-```
-
-#### Incognito mode
-
-Run without any memory — nothing is loaded or saved:
-
-```ruby
-Mana.incognito do
-  ~"translate <text>"  # no memory, no persistence
-end
-```
-
 ## Configuration
 
 All options can be set via environment variables (`.env` file) or `Mana.configure`:
@@ -267,16 +224,13 @@ Mana.configure do |c|
   c.api_key = "sk-..."
   c.verbose = true
   c.timeout = 120
-
-  # Memory settings
+  c.max_iterations = 20           # max tool-call rounds per prompt
   c.namespace = "my-project"      # nil = auto-detect from git/pwd
   c.context_window = 128_000      # default: 128_000
-  c.memory_pressure = 0.7         # compact when tokens exceed 70% of context window
-  c.memory_keep_recent = 4        # keep last 4 rounds during compaction
-  c.compact_model = nil           # nil = use main model for compaction
   c.memory_store = Mana::FileStore.new  # default file-based persistence
-  c.persist_session = true        # persist short-term memory across restarts
-  c.memory_top_k = 10             # max memories to inject when searching (> 20 memories)
+  c.memory_path = ".mana"         # directory for memory files
+  c.memory_class = nil            # custom memory class
+  c.knowledge_provider = nil      # custom knowledge provider
 end
 ```
 
@@ -345,7 +299,6 @@ Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the 
   numbers = [1, 2, 3]
   ~"average of <numbers>,          ──→  system prompt:
     store in <result>"                    - rules + tools
-                                          - memory (short/long-term)
                                           - variables: numbers = [1,2,3]
                                           - available functions
 
@@ -365,13 +318,11 @@ Unmatched prompts raise `Mana::MockError` with a helpful message suggesting the 
 
 2. **Build context** — parses `<var>` references from the prompt, reads their current values, discovers available functions via Prism AST (with YARD descriptions if present).
 
-3. **Build system prompt** — assembles rules, memory (short-term conversation + long-term facts + compaction summaries), variable values, and function signatures into a single system prompt.
+3. **Build system prompt** — assembles rules, variable values, and function signatures into a single system prompt.
 
-4. **LLM tool-calling loop** — sends prompt to the LLM with built-in tools (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`, `error`, `eval`, `think`, `knowledge`, `remember`). The LLM responds with tool calls, Mana executes them against the live Ruby binding, and sends results back. This loops until `done` is called or no more tool calls are returned.
+4. **LLM tool-calling loop** — sends prompt to the LLM with built-in tools (`read_var`, `write_var`, `read_attr`, `write_attr`, `call_func`, `done`, `error`, `eval`, `think`). The LLM responds with tool calls, Mana executes them against the live Ruby binding, and sends results back. This loops until `done` is called or no more tool calls are returned.
 
 5. **Return value** — single `write_var` returns the value directly; multiple writes return a Hash. On Ruby 4.0+, a singleton method fallback ensures variables are accessible in the caller's scope.
-
-6. **Background compaction** — if short-term memory exceeds the token pressure threshold, old messages are summarized by the LLM in a background thread and replaced with a compact summary.
 
 
 ## License
