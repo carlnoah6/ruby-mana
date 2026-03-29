@@ -41,7 +41,13 @@ RSpec.describe Mana::Knowledge do
       end
     end
 
-    context "ri documentation", if: -> { system("ri --version > /dev/null 2>&1") } do
+    context "ri documentation" do
+      # ri may be installed but have no docs in CI — check if it actually returns content
+      before do
+        ri_output = `ri Array#map 2>/dev/null`.strip rescue ""
+        skip "ri docs not available" if ri_output.empty?
+      end
+
       it "returns ri docs for 'Array#map'" do
         result = described_class.query("Array#map")
         expect(result).to start_with("[source: ri (Ruby official docs)]")
@@ -86,7 +92,9 @@ RSpec.describe Mana::Knowledge do
       expect(described_class.query("ruby")).to start_with("[source: ruby runtime]")
     end
 
-    it "labels ri docs", if: -> { system("ri --version > /dev/null 2>&1") } do
+    it "labels ri docs" do
+      ri_output = `ri Hash#merge 2>/dev/null`.strip rescue ""
+      skip "ri docs not available" if ri_output.empty?
       result = described_class.query("Hash#merge")
       expect(result).to start_with("[source: ri (Ruby official docs)]")
     end
