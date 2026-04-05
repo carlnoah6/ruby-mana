@@ -1,14 +1,28 @@
 # Changelog
 
-## [0.5.12] - 2026-03-27
+## [0.5.12] - 2026-04-04
 
 ### Changed
 - Reposition ruby-mana as a pure embedded LLM engine; agent features (chat, memory, compaction) moved to ruby-claw
-- README: remove Memory/Compaction/Incognito sections and related config options
-- README: add ruby-claw cross-reference for agent features
-- Website: update tagline to "embedded LLM engine", add ruby-claw link
-- Remove `knowledge` and `remember` from documented tool list (moved to ruby-claw)
-- Remove config options: `memory_pressure`, `memory_keep_recent`, `compact_model`, `on_compact`, `persist_session`, `memory_top_k`
+- Rename `Mana::Memory` to `Mana::Context`; `short_term` to `messages`
+- Remove `incognito` mechanism from mana (moved to claw layer)
+- Remove `remember` tool and `REMEMBER_TOOL` constant (now registered by claw via tool interface)
+- Remove long-term memory injection from prompt builder
+- Refactor `tool_handler.rb`: case/when dispatch replaced with `BUILTIN_TOOLS` + `send("handle_#{name}")` dispatch map
+- Update `eval` tool description to emphasize "define new methods/classes/require" role
+- `config.memory_class` renamed to `config.context_class`
+
+### Added
+- `Mana.register_tool(definition, &handler)` — external tool registration interface
+- `Mana.register_prompt_section(&block)` — external prompt injection interface
+- `Mana.tool_handlers` — access registered tool handler map
+- `BUILTIN_TOOLS` constant in ToolHandler for dispatch map
+
+### Removed
+- `Mana.incognito` / `Context.incognito?` / `Context.incognito` — incognito is now claw's responsibility
+- `REMEMBER_TOOL` constant
+- `@incognito` instance variable from Engine
+- Long-term memory (`long_term`, `remember`, `forget`) from Context
 
 ## [0.5.11] - 2026-03-27
 

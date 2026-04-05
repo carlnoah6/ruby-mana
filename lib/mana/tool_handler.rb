@@ -3,82 +3,27 @@
 module Mana
   # Dispatches LLM tool calls to their respective handlers.
   # Mixed into Engine as a private method.
+  #
+  # Built-in tools are dispatched via instance methods (handle_<name>),
+  # which can access @binding, @written_vars, etc.
+  # External tools (registered via Mana.register_tool) are dispatched via Procs
+  # that only receive input — they cannot access the engine's binding.
   module ToolHandler
+    BUILTIN_TOOLS = %w[read_var write_var read_attr write_attr call_func eval knowledge done error].freeze
+
     private
 
     # Dispatch a single tool call from the LLM.
-    def handle_effect(tool_use, memory = nil)
+    def handle_effect(tool_use)
       name = tool_use[:name]
       input = tool_use[:input] || {}
       # Normalize keys to strings for consistent access
       input = input.transform_keys(&:to_s) if input.is_a?(Hash)
 
-      case name
-      when "read_var"
-        # Read a variable from the caller's binding and return its serialized value
-        val = serialize_value(resolve(input["name"]))
-        vlog_value("   ↩ #{input['name']} =", val)
-        val
-
-      when "write_var"
-        # Write a value to the caller's binding and track it for the return value
-        var_name = input["name"]
-        value = input["value"]
-        write_local(var_name, value)
-        @written_vars[var_name] = value
-        vlog_value("   ✅ #{var_name} =", value)
-        "ok: #{var_name} = #{value.inspect}"
-
-      when "read_attr"
-        # Read an attribute (public method) from a Ruby object in scope
-        obj = resolve(input["obj"])
-        validate_name!(input["attr"])
-        serialize_value(obj.public_send(input["attr"]))
-
-      when "write_attr"
-        # Set an attribute (public setter) on a Ruby object in scope
-        obj = resolve(input["obj"])
-        validate_name!(input["attr"])
-        obj.public_send("#{input['attr']}=", input["value"])
-        "ok: #{input['obj']}.#{input['attr']} = #{input['value'].inspect}"
-
-      when "call_func"
-        handle_call_func(input)
-
-      when "knowledge"
-        # Look up information about ruby-mana from the knowledge base
-        self.class.knowledge(input["topic"])
-
-      when "remember"
-        # Store a fact in long-term memory (persistent across executions)
-        if @incognito
-          "Memory not saved (incognito mode)"
-        elsif memory
-          entry = memory.remember(input["content"])
-          "Remembered (id=#{entry[:id]}): #{input['content']}"
-        else
-          "Memory not available"
-        end
-
-      when "done"
-        # Signal task completion; the result becomes the return value
-        done_val = input["result"]
-        vlog_value("🏁 Done:", done_val)
-        vlog("═" * 60)
-        input["result"].to_s
-
-      when "error"
-        # LLM signals it cannot complete the task — raise as exception
-        msg = input["message"] || "LLM reported an error"
-        vlog("❌ Error: #{msg}")
-        vlog("═" * 60)
-        raise Mana::LLMError, msg
-
-      when "eval"
-        result = @binding.eval(input["code"])
-        vlog_value("   ↩ eval →", result)
-        serialize_value(result)
-
+      if BUILTIN_TOOLS.include?(name)
+        send("handle_#{name}", input)
+      elsif (handler = Mana.tool_handlers[name])
+        handler.call(input)
       else
         "error: unknown tool #{name}"
       end
@@ -90,6 +35,62 @@ module Mana
       # StandardError covers everything else (NameError, TypeError, etc.)
       "error: #{e.class}: #{e.message}"
     end
+
+    # --- Built-in tool handlers ---
+
+    def handle_read_var(input)
+      val = serialize_value(resolve(input["name"]))
+      vlog_value("   ↩ #{input['name']} =", val)
+      val
+    end
+
+    def handle_write_var(input)
+      var_name = input["name"]
+      value = input["value"]
+      write_local(var_name, value)
+      @written_vars[var_name] = value
+      vlog_value("   ✅ #{var_name} =", value)
+      "ok: #{var_name} = #{value.inspect}"
+    end
+
+    def handle_read_attr(input)
+      obj = resolve(input["obj"])
+      validate_name!(input["attr"])
+      serialize_value(obj.public_send(input["attr"]))
+    end
+
+    def handle_write_attr(input)
+      obj = resolve(input["obj"])
+      validate_name!(input["attr"])
+      obj.public_send("#{input['attr']}=", input["value"])
+      "ok: #{input['obj']}.#{input['attr']} = #{input['value'].inspect}"
+    end
+
+    def handle_knowledge(input)
+      self.class.knowledge(input["topic"])
+    end
+
+    def handle_done(input)
+      done_val = input["result"]
+      vlog_value("🏁 Done:", done_val)
+      vlog("═" * 60)
+      input["result"].to_s
+    end
+
+    def handle_error(input)
+      msg = input["message"] || "LLM reported an error"
+      vlog("❌ Error: #{msg}")
+      vlog("═" * 60)
+      raise Mana::LLMError, msg
+    end
+
+    def handle_eval(input)
+      result = @binding.eval(input["code"])
+      vlog_value("   ↩ eval →", result)
+      serialize_value(result)
+    end
+
+    # --- call_func and helpers ---
 
     # Handle call_func tool: chained calls, block bodies, simple calls
     def handle_call_func(input)

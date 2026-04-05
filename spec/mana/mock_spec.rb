@@ -7,7 +7,6 @@ RSpec.describe Mana::Mock do
   before do
     Mana.config.api_key = "test-key"
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     Thread.current[:mana_mock] = nil
     @tmpdir = Dir.mktmpdir("mana_test")
     Mana.config.memory_store = Mana::FileStore.new(@tmpdir)
@@ -15,7 +14,6 @@ RSpec.describe Mana::Mock do
 
   after do
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     Thread.current[:mana_mock] = nil
     FileUtils.rm_rf(@tmpdir)
     Mana.reset!
@@ -227,28 +225,15 @@ RSpec.describe Mana::Mock do
       Mana::Engine.run("test prompt", b)
 
       memory = Mana.memory
-      expect(memory.short_term.size).to eq(2)
-      expect(memory.short_term[0][:role]).to eq("user")
-      expect(memory.short_term[0][:content]).to eq("test prompt")
-      expect(memory.short_term[1][:role]).to eq("assistant")
+      expect(memory.messages.size).to eq(2)
+      expect(memory.messages[0][:role]).to eq("user")
+      expect(memory.messages[0][:content]).to eq("test prompt")
+      expect(memory.messages[1][:role]).to eq("assistant")
 
       Mana.unmock!
     end
 
-    it "skips memory in incognito mode" do
-      Mana::Memory.incognito do
-        Mana.mock!
-        Mana.current_mock.prompt("test", value: 42)
-
-        b = binding
-        Mana::Engine.run("test prompt", b)
-
-        Mana.unmock!
-      end
-
-      memory = Mana.memory
-      expect(memory.short_term).to be_empty
-    end
+    # incognito removed from mana — now handled by claw
   end
 
   describe "Mana.reset!" do
@@ -266,7 +251,6 @@ RSpec.describe Mana::TestHelpers do
   before do
     Mana.config.api_key = "test-key"
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     Thread.current[:mana_mock] = nil
     @tmpdir = Dir.mktmpdir("mana_test")
     Mana.config.memory_store = Mana::FileStore.new(@tmpdir)
@@ -274,7 +258,6 @@ RSpec.describe Mana::TestHelpers do
 
   after do
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     Thread.current[:mana_mock] = nil
     FileUtils.rm_rf(@tmpdir)
     Mana.reset!

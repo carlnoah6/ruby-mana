@@ -34,35 +34,25 @@ module Mana
         "- done(result: ...) to return a value. error(message: ...) only after you have tried and failed.",
         "- <var> references point to variables in scope; create with write_var if missing.",
         "- Match types precisely: numbers for numeric values, arrays for lists, strings for text.",
+        "- eval to define new methods, new classes, or require libraries. For operating on existing variables and functions, use read_var/write_var/call_func.",
         "- Current prompt overrides conversation history and memories.",
       ]
 
-      if @incognito
-        parts << ""
-        parts << "You are in incognito mode. The remember tool is disabled. No memories will be loaded or saved."
-      else
-        memory = Memory.current
-        # Inject memory context when available
-        if memory
-          # Add compaction summaries from prior conversations
-          unless memory.summaries.empty?
-            parts << ""
-            parts << "Previous conversation summary:"
-            memory.summaries.each { |s| parts << "  #{s}" }
-          end
-
-          # Add persistent long-term facts
-          unless memory.long_term.empty?
-            parts << ""
-            parts << "Long-term memories (persistent background context):"
-            memory.long_term.each { |m| parts << "- #{m[:content]}" }
-          end
-
-          unless memory.long_term.empty?
-            parts << ""
-            parts << "You have a `remember` tool to store new facts in long-term memory when the user asks."
-          end
+      mana_ctx = Context.current
+      # Inject context when available
+      if mana_ctx
+        # Add compaction summaries from prior conversations
+        unless mana_ctx.summaries.empty?
+          parts << ""
+          parts << "Previous conversation summary:"
+          mana_ctx.summaries.each { |s| parts << "  #{s}" }
         end
+      end
+
+      # Inject registered prompt sections (e.g. long-term memories from claw)
+      Mana.prompt_sections.each do |section_block|
+        text = section_block.call
+        parts << "" << text if text && !text.empty?
       end
 
       # Inject current variable values referenced in the prompt
@@ -135,7 +125,7 @@ module Mana
 
       # User-defined classes/modules (skip Ruby internals)
       skip = [Object, Kernel, BasicObject, Module, Class, Mana, Mana::Engine,
-              Mana::Memory, Mana::Config]
+              Mana::Memory, Mana::Context, Mana::Config]
       user_classes = ObjectSpace.each_object(Class)
         .reject { |c| c.name.nil? || c.name.start_with?("Mana::") || c.name.start_with?("#<") }
         .reject { |c| skip.include?(c) }

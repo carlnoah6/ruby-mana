@@ -96,7 +96,7 @@ module Mana
       },
       {
         name: "eval",
-        description: "Execute Ruby code directly in the caller's binding. Returns the result of the last expression. Use this for anything that's easier to express as Ruby code than as individual tool calls.",
+        description: "Define new methods, classes, or require libraries — use this to create new things in the runtime. For reading/writing variables and calling existing functions, use the other tools.",
         input_schema: {
           type: "object",
           properties: {
@@ -118,18 +118,6 @@ module Mana
       }
     ].freeze
 
-    # Separated from TOOLS because it's conditionally excluded in incognito mode
-    REMEMBER_TOOL = {
-      name: "remember",
-      description: "Store a fact in long-term memory. This memory persists across script executions. Use when the user explicitly asks to remember something.",
-      input_schema: {
-        type: "object",
-        properties: { content: { type: "string", description: "The fact to remember" } },
-        required: ["content"]
-      }
-    }.freeze
-
-
     class << self
       # Entry point for ~"..." prompts. Routes to mock handler or real LLM engine.
       def run(prompt, caller_binding)
@@ -141,11 +129,9 @@ module Mana
         new(caller_binding).execute(prompt)
       end
 
-      # Built-in tools + remember (conditional)
+      # Built-in tools + registered tools (e.g. remember from claw)
       def all_tools
-        tools = TOOLS.dup
-        tools << REMEMBER_TOOL unless Memory.incognito?
-        tools
+        TOOLS.dup + Mana.registered_tools
       end
 
       # Query the runtime knowledge base.
@@ -156,40 +142,34 @@ module Mana
       end
     end
 
-    # Capture the caller's binding, config, source path, and incognito state
+    # Capture the caller's binding, config, and source path
     def initialize(caller_binding, config = Mana.config)
       @binding = caller_binding
       @config = config
       @caller_path = caller_source_path
-      @incognito = Memory.incognito?
     end
 
     # Main execution loop: build context, call LLM, handle tool calls, iterate until done.
     # Optional &on_text block receives streaming text deltas for real-time display.
     def execute(prompt, &on_text)
-      # Track nesting depth to isolate memory for nested ~"..." calls
+      # Track nesting depth to isolate context for nested ~"..." calls
       Thread.current[:mana_depth] ||= 0
       Thread.current[:mana_depth] += 1
       nested = Thread.current[:mana_depth] > 1
-      outer_memory = nil  # defined here so ensure block always has access
+      outer_context = nil  # defined here so ensure block always has access
 
-      # Nested calls get fresh short-term memory but share long-term
-      if nested && !@incognito
-        outer_memory = Thread.current[:mana_memory]
-        inner_memory = Mana::Memory.new
-        long_term = outer_memory&.long_term || []
-        inner_memory.instance_variable_set(:@long_term, long_term)
-        inner_memory.instance_variable_set(:@next_id, (long_term.map { |m| m[:id] }.max || 0) + 1)
-        Thread.current[:mana_memory] = inner_memory
+      # Nested calls get fresh short-term context
+      if nested
+        outer_context = Thread.current[:mana_context]
+        Thread.current[:mana_context] = Mana::Context.new
       end
 
       # Extract <var> references from the prompt and read their current values
       context = build_context(prompt)
       system_prompt = build_system_prompt(context)
 
-      memory = @incognito ? nil : Memory.current
-
-      messages = memory ? memory.short_term : []
+      memory = Context.current
+      messages = memory.messages
 
       # Strip trailing unpaired tool_use messages from prior calls.
       # Both Anthropic and OpenAI reject requests where the last assistant message
@@ -253,7 +233,7 @@ module Mana
               on_text.call(:tool_start, tu[:name], tu[:input])
             end
           end
-          result = handle_effect(tu, memory)
+          result = handle_effect(tu)
           if on_text && !%w[done error].include?(tu[:name])
             on_text.call(:tool_end, tu[:name], result)
           end
@@ -268,7 +248,7 @@ module Mana
       end
 
       # Append a final assistant summary so LLM has full context next call
-      if memory && done_result
+      if done_result
         messages << { role: "assistant", content: [{ type: "text", text: "Done: #{done_result}" }] }
       end
 
@@ -286,14 +266,14 @@ module Mana
     rescue => e
       # Rollback: remove messages added during this failed call so they don't
       # pollute short-term memory for subsequent prompts
-      if memory && messages.size > messages_start_size
+      if messages.size > messages_start_size
         messages.slice!(messages_start_size..)
       end
       raise e
     ensure
-      # Restore outer memory when exiting a nested call
-      if nested && !@incognito
-        Thread.current[:mana_memory] = outer_memory
+      # Restore outer context when exiting a nested call
+      if nested
+        Thread.current[:mana_context] = outer_context
       end
       Thread.current[:mana_depth] -= 1 if Thread.current[:mana_depth]
     end
@@ -324,13 +304,11 @@ module Mana
         write_local(name.to_s, value)
       end
 
-      # Record in short-term memory if not incognito
-      if !@incognito
-        memory = Memory.current
-        if memory
-          memory.short_term << { role: "user", content: prompt }
-          memory.short_term << { role: "assistant", content: [{ type: "text", text: "Done: #{return_value || values.inspect}" }] }
-        end
+      # Record in context
+      memory = Context.current
+      if memory
+        memory.messages << { role: "user", content: prompt }
+        memory.messages << { role: "assistant", content: [{ type: "text", text: "Done: #{return_value || values.inspect}" }] }
       end
 
       # Return _return value if set, otherwise the first written value

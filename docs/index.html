@@ -107,6 +107,7 @@
     <div class="logo">ruby-<span class="m">mana</span> 🔮</div>
     <div class="lk">
       <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
       <a href="#examples">Examples</a>
       <a href="https://github.com/twokidsCarl/ruby-mana">GitHub</a>
       <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a>
@@ -122,7 +123,9 @@
   <p class="tl">A pure embedded LLM engine for Ruby. Write natural language, it just runs.</p>
   <p class="sub"><em>Not an API wrapper.</em> A language construct that weaves LLM into your code.</p>
   <p class="sub" style="margin-top:8px;font-size:.95rem;color:var(--dim)">Ruby 3.3+ gem that embeds LLM as a native language construct. MIT licensed.</p>
-  <p class="sub" style="margin-top:4px;font-size:.95rem"><a href="https://github.com/twokidsCarl/ruby-claw" style="color:var(--ac2)">Need an AI agent? See ruby-claw →</a></p>
+  <div style="margin-top:12px;padding:10px 20px;display:inline-block;border:1px solid var(--ac2);border-radius:8px;background:rgba(247,120,186,.08)">
+    <a href="https://github.com/twokidsCarl/ruby-claw" style="color:var(--ac2);font-size:1rem;font-weight:600">Building an AI agent? ruby-claw uses mana as its engine →</a>
+  </div>
 
   <div class="carousel" id="heroCarousel">
     <div class="slide active">
@@ -281,7 +284,7 @@ puts total  <span class="cmt"># =&gt; 438.4</span></pre>
 <!-- Features -->
 <section id="features">
   <h2>Features</h2>
-  <div class="grid">
+  <div class="grid grid-3">
     <div class="card">
       <h3>🔮 Semantic computation</h3>
       <p><code>~"..."</code> turns any string into an LLM prompt that reads and writes live Ruby state. One character, full binding access — variables, objects, functions.</p>
@@ -297,6 +300,38 @@ puts total  <span class="cmt"># =&gt; 438.4</span></pre>
     <div class="card">
       <h3>⚡ Function discovery</h3>
       <p>Prism AST parser auto-discovers your methods and signatures. Just define Ruby functions — LLM finds and calls them. No registration needed.</p>
+    </div>
+    <div class="card">
+      <h3>🧩 Tool registration interface</h3>
+      <p><code>Mana.register_tool</code> lets frameworks like <a href="https://github.com/twokidsCarl/ruby-claw">ruby-claw</a> inject agent tools into the engine. Clean boundary between engine and consumer.</p>
+    </div>
+    <div class="card">
+      <h3>🗺️ Dispatch map architecture</h3>
+      <p>Registered tools route through a clean dispatch map — tool name to handler. No tangled if/else chains, just declarative routing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how-it-works">
+  <h2>How it works</h2>
+  <p class="lead">Mana is a pure stateless engine. No persistent memory — just context in, result out.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="sn">1</div>
+      <div class="st"><strong>Context flows in.</strong> Your Ruby binding (variables, objects, functions) is captured and passed as context to the LLM. Nothing is stored between calls.</div>
+    </div>
+    <div class="step">
+      <div class="sn">2</div>
+      <div class="st"><strong>Tools are registered.</strong> Frameworks call <code style="color:var(--gr)">Mana.register_tool</code> to inject capabilities. The dispatch map routes each tool call to its handler.</div>
+    </div>
+    <div class="step">
+      <div class="sn">3</div>
+      <div class="st"><strong>LLM executes.</strong> The engine sends context + messages to the LLM provider, receives a result, and writes it back into your Ruby state. Pure function — no side-channel persistence.</div>
+    </div>
+    <div class="step">
+      <div class="sn">4</div>
+      <div class="st"><strong>ruby-claw builds on top.</strong> <a href="https://github.com/twokidsCarl/ruby-claw">ruby-claw</a> uses mana as its LLM engine, registering agent tools (web search, file I/O, code execution) through the tool interface. Mana stays stateless; claw manages the agent loop.</div>
     </div>
   </div>
 </section>
@@ -366,6 +401,7 @@ puts Mana.source(<span class="str">:slugify</span>)     <span class="cmt"># view
 <!-- Docs link -->
 <section style="text-align:center">
   <p><a href="https://github.com/twokidsCarl/ruby-mana#readme">Full documentation on GitHub →</a></p>
+  <p style="margin-top:12px;color:var(--dim)">Building agents? <a href="https://github.com/twokidsCarl/ruby-claw" style="color:var(--ac2)">ruby-claw</a> is the agent framework powered by mana.</p>
 </section>
 
 <!-- Footer -->
@@ -373,6 +409,7 @@ puts Mana.source(<span class="str">:slugify</span>)     <span class="cmt"># view
   <p>
     <a href="https://github.com/twokidsCarl/ruby-mana">GitHub</a> ·
     <a href="https://rubygems.org/gems/ruby-mana">RubyGems</a> ·
+    <a href="https://github.com/twokidsCarl/ruby-claw">ruby-claw</a> ·
     MIT License
   </p>
   <p style="margin-top:8px">Ruby 3.3+ · Claude, GPT, and local LLMs · MIT licensed</p>

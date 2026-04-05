@@ -14,8 +14,12 @@ module Mana
                   :backend, :verbose,
                   :namespace, :memory_store, :memory_path,
                   :context_window,
-                  :memory_class, :knowledge_provider
+                  :context_class, :knowledge_provider
     attr_reader :timeout
+
+    # Backward compatibility aliases
+    alias_method :memory_class, :context_class
+    alias_method :memory_class=, :context_class=
 
     DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com"
     DEFAULT_OPENAI_URL = "https://api.openai.com"
@@ -37,7 +41,7 @@ module Mana
       @memory_store = nil
       @memory_path = nil
       @context_window = 128_000
-      @memory_class = nil          # nil = use Mana::Memory; set to custom class (e.g. Claw::Memory)
+      @context_class = nil         # nil = use Mana::Context; set to custom class
       @knowledge_provider = nil    # nil = use Mana::Knowledge; set to custom module with .query(topic)
     end
 

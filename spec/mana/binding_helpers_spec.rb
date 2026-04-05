@@ -6,12 +6,10 @@ RSpec.describe Mana::BindingHelpers do
   before do
     Mana.config.api_key = "test-key"
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
   end
 
   after do
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     Mana.reset!
   end
 

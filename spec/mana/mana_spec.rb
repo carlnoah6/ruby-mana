@@ -53,26 +53,13 @@ RSpec.describe Mana do
   end
 
   describe ".memory" do
-    it "returns current thread memory" do
+    it "returns current thread context" do
       mem = Mana.memory
-      expect(mem).to be_a(Mana::Memory)
+      expect(mem).to be_a(Mana::Context)
     end
   end
 
-  describe ".incognito" do
-    it "runs block in incognito mode" do
-      was_incognito = nil
-      Mana.incognito do
-        was_incognito = Mana::Memory.incognito?
-      end
-      expect(was_incognito).to be true
-    end
-
-    it "restores non-incognito after block" do
-      Mana.incognito { }
-      expect(Mana::Memory.incognito?).to be false
-    end
-  end
+  # incognito removed from mana — now handled by claw
 
 
   describe ".source" do

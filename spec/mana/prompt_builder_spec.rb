@@ -5,15 +5,15 @@ require "spec_helper"
 RSpec.describe Mana::PromptBuilder do
   before do
     Mana.config.api_key = "test-key"
+    Thread.current[:mana_context] = nil
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     @tmpdir = Dir.mktmpdir("mana_test")
     Mana.config.memory_store = Mana::FileStore.new(@tmpdir)
   end
 
   after do
+    Thread.current[:mana_context] = nil
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     FileUtils.rm_rf(@tmpdir)
     Mana.reset!
   end
@@ -90,20 +90,12 @@ RSpec.describe Mana::PromptBuilder do
       expect(prompt).not_to include("Current variable values:")
     end
 
-    it "includes incognito notice when in incognito mode" do
-      Mana::Memory.incognito do
-        b = binding
-        engine = Mana::Engine.new(b)
-        prompt = engine.send(:build_system_prompt, {})
-        expect(prompt).to include("incognito mode")
-        expect(prompt).to include("remember tool is disabled")
-      end
-    end
+    # incognito removed from mana — now handled by claw
 
-    it "includes memory summaries when available" do
-      memory = Mana.memory
-      memory.summaries << "User prefers short answers"
-      memory.summaries << "Previous task completed successfully"
+    it "includes context summaries when available" do
+      context = Mana.memory
+      context.summaries << "User prefers short answers"
+      context.summaries << "Previous task completed successfully"
 
       b = binding
       engine = Mana::Engine.new(b)
@@ -113,21 +105,19 @@ RSpec.describe Mana::PromptBuilder do
       expect(prompt).to include("Previous task completed successfully")
     end
 
-    it "includes long-term memories when available" do
-      memory = Mana.memory
-      memory.long_term << { id: 1, content: "User likes Ruby" }
-      memory.long_term << { id: 2, content: "Preferred language: English" }
+    it "includes registered prompt sections" do
+      Mana.register_prompt_section do
+        "Long-term memories (persistent background context):\n- User likes Ruby"
+      end
 
       b = binding
       engine = Mana::Engine.new(b)
       prompt = engine.send(:build_system_prompt, {})
       expect(prompt).to include("Long-term memories")
       expect(prompt).to include("User likes Ruby")
-      expect(prompt).to include("Preferred language: English")
-      expect(prompt).to include("remember")
     end
 
-    it "excludes memory sections when no memories exist" do
+    it "excludes memory sections when no summaries or prompt sections" do
       b = binding
       engine = Mana::Engine.new(b)
       prompt = engine.send(:build_system_prompt, {})
@@ -135,16 +125,13 @@ RSpec.describe Mana::PromptBuilder do
       expect(prompt).not_to include("Long-term memories")
     end
 
-    it "injects all long-term memories" do
-      memory = Mana.memory
-      3.times { |i| memory.remember("fact #{i}") }
+    it "skips nil prompt sections" do
+      Mana.register_prompt_section { nil }
 
       b = binding
       engine = Mana::Engine.new(b)
       prompt = engine.send(:build_system_prompt, {})
-      expect(prompt).to include("fact 0")
-      expect(prompt).to include("fact 1")
-      expect(prompt).to include("fact 2")
+      expect(prompt).not_to include("Long-term memories")
     end
   end
 end

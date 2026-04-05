@@ -5,15 +5,15 @@ require "spec_helper"
 RSpec.describe Mana::Engine do
   before do
     Mana.config.api_key = "test-key"
+    Thread.current[:mana_context] = nil
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     @tmpdir = Dir.mktmpdir("mana_test")
     Mana.config.memory_store = Mana::FileStore.new(@tmpdir)
   end
 
   after do
+    Thread.current[:mana_context] = nil
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     FileUtils.rm_rf(@tmpdir)
     Mana.reset!
   end
@@ -137,12 +137,12 @@ RSpec.describe Mana::Engine do
         [{ type: "tool_use", id: "t1", name: "error", input: { "message" => "failed" } }]
       )
 
-      memory = Mana::Memory.current
-      messages_before = memory.short_term.size
+      memory = Mana::Context.current
+      messages_before = memory.messages.size
 
       b = binding
       expect { Mana::Engine.run("fail task", b) }.to raise_error(Mana::LLMError)
-      expect(memory.short_term.size).to eq(messages_before)
+      expect(memory.messages.size).to eq(messages_before)
     end
 
     it "returns done result" do
@@ -250,32 +250,7 @@ RSpec.describe Mana::Engine do
       expect { Mana::Engine.run("test", b) }.not_to raise_error
     end
 
-    it "handles remember tool" do
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "remember", input: { "content" => "user likes Ruby" } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "ok" } }]
-      )
-
-      b = binding
-      Mana::Engine.run("remember I like Ruby", b)
-      expect(Mana.memory.long_term.size).to eq(1)
-      expect(Mana.memory.long_term.first[:content]).to eq("user likes Ruby")
-    end
-
-    it "blocks remember in incognito mode" do
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "remember", input: { "content" => "secret" } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: {} }]
-      )
-
-      Mana::Memory.incognito do
-        b = binding
-        Mana::Engine.run("remember this", b)
-      end
-
-      memory = Mana.memory
-      expect(memory.long_term).to be_empty
-    end
+    # remember tool tests moved to claw (remember is now a registered tool from claw)
   end
 
   describe "#execute" do
@@ -519,23 +494,18 @@ RSpec.describe Mana::Engine do
   end
 
   describe ".all_tools" do
-    it "includes remember tool normally" do
-      names = described_class.all_tools.map { |t| t[:name] }
-      expect(names).to include("remember")
-    end
-
-    it "excludes remember tool in incognito" do
-      Mana::Memory.incognito do
-        names = described_class.all_tools.map { |t| t[:name] }
-        expect(names).not_to include("remember")
-      end
-    end
-
-    it "includes knowledge tool" do
+    it "includes built-in tools" do
       names = described_class.all_tools.map { |t| t[:name] }
       expect(names).to include("knowledge")
+      expect(names).to include("done")
+      expect(names).to include("read_var")
     end
 
+    it "includes registered tools" do
+      Mana.register_tool({ name: "custom", description: "test", input_schema: { type: "object", properties: {} } }) { "ok" }
+      names = described_class.all_tools.map { |t| t[:name] }
+      expect(names).to include("custom")
+    end
   end
 
   describe ".knowledge" do
@@ -667,8 +637,8 @@ RSpec.describe Mana::Engine do
     it "strips trailing unpaired tool_use from short-term memory" do
       # Simulate a broken conversation state in memory
       memory = Mana.memory
-      memory.short_term << { role: "user", content: "test" }
-      memory.short_term << {
+      memory.messages << { role: "user", content: "test" }
+      memory.messages << {
         role: "assistant",
         content: [{ type: "tool_use", id: "t1", name: "read_var", input: { "name" => "x" } }]
       }

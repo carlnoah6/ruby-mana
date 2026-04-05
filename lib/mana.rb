@@ -6,7 +6,8 @@ require_relative "mana/backends/base"
 require_relative "mana/backends/anthropic"
 require_relative "mana/backends/openai"
 require_relative "mana/memory_store"
-require_relative "mana/memory"
+require_relative "mana/memory"    # kept for backward compatibility until claw migrates
+require_relative "mana/context"
 require_relative "mana/logger"
 require_relative "mana/knowledge"
 require_relative "mana/binding_helpers"
@@ -42,21 +43,62 @@ module Mana
       config.model = model
     end
 
-    # Reset all global state: config, thread-local memory and mock
+    # Reset all global state: config, thread-local context and mock
     def reset!
       @config = Config.new
-      Thread.current[:mana_memory] = nil
+      Thread.current[:mana_context] = nil
+      Thread.current[:mana_memory] = nil  # backward compat for claw transition
       Thread.current[:mana_mock] = nil
+      clear_tools!
     end
 
-    # Access current thread's memory
+    # Access current thread's context (public API kept as `memory` for backward compat)
     def memory
-      Memory.current
+      Context.current
     end
 
-    # Run a block in incognito mode (no memory)
-    def incognito(&block)
-      Memory.incognito(&block)
+    # --- Tool registration ---
+
+    # Register an external tool definition with its handler block.
+    # tool_definition is a hash with :name, :description, :input_schema.
+    # The handler block receives (input) and returns a result string.
+    def register_tool(tool_definition, &handler)
+      @registered_tools ||= []
+      @tool_handlers ||= {}
+      @registered_tools << tool_definition
+      @tool_handlers[tool_definition[:name]] = handler
+    end
+
+    # Return a copy of the registered tool definitions
+    def registered_tools
+      @registered_tools ||= []
+      @registered_tools.dup
+    end
+
+    # Return the name → handler mapping for registered tools
+    def tool_handlers
+      @tool_handlers ||= {}
+    end
+
+    # Clear all registered tools, handlers, and prompt sections
+    def clear_tools!
+      @registered_tools = []
+      @tool_handlers = {}
+      @prompt_sections = []
+    end
+
+    # --- Prompt section registration ---
+
+    # Register a block that returns text to inject into the system prompt.
+    # The block is called each time a prompt is built. Return nil or "" to skip.
+    def register_prompt_section(&block)
+      @prompt_sections ||= []
+      @prompt_sections << block
+    end
+
+    # Return the list of registered prompt section blocks
+    def prompt_sections
+      @prompt_sections ||= []
     end
 
     # View generated source for a mana-compiled method

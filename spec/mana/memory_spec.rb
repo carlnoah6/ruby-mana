@@ -5,7 +5,6 @@ require "spec_helper"
 RSpec.describe Mana::Memory do
   before do
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     # Use a temp directory for file store
     @tmpdir = Dir.mktmpdir("mana_test")
     Mana.config.memory_store = Mana::FileStore.new(@tmpdir)
@@ -14,7 +13,6 @@ RSpec.describe Mana::Memory do
 
   after do
     Thread.current[:mana_memory] = nil
-    Thread.current[:mana_incognito] = nil
     FileUtils.rm_rf(@tmpdir)
     Mana.reset!
   end
@@ -39,7 +37,7 @@ RSpec.describe Mana::Memory do
   end
 
   describe "default memory (consecutive calls share context)" do
-    it "shares short_term messages across engine calls" do
+    it "shares messages across engine calls" do
       stub_anthropic_sequence(
         [{ type: "tool_use", id: "t1", name: "done", input: { "result" => "noted" } }],
         [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "translated" } }]
@@ -47,11 +45,11 @@ RSpec.describe Mana::Memory do
 
       b = binding
       Mana::Engine.run("remember: be concise", b)
-      memory = Mana.memory
-      expect(memory.short_term.length).to be >= 2
+      context = Mana.memory  # returns Mana::Context
+      expect(context.messages.length).to be >= 2
 
       Mana::Engine.run("translate something", b)
-      expect(memory.short_term.length).to be >= 4
+      expect(context.messages.length).to be >= 4
     end
   end
 
@@ -274,37 +272,15 @@ RSpec.describe Mana::Memory do
   end
 
   describe "Mana.memory" do
-    it "returns current thread memory" do
-      memory = Mana.memory
-      expect(memory).to be_a(described_class)
-      expect(memory).to equal(described_class.current)
+    it "returns current thread context (Mana::Context)" do
+      # Mana.memory now returns Mana::Context, not Mana::Memory
+      ctx = Mana.memory
+      expect(ctx).to be_a(Mana::Context)
     end
   end
 
-  describe "Mana.incognito" do
-    it "delegates to Memory.incognito" do
-      called = false
-      Mana.incognito do
-        called = true
-        expect(described_class.incognito?).to be true
-      end
-      expect(called).to be true
-    end
-  end
+  # incognito removed from mana — now handled by claw
 
-  describe "remember tool integration" do
-    it "stores to long-term memory when LLM calls remember" do
-      stub_anthropic_sequence(
-        [{ type: "tool_use", id: "t1", name: "remember", input: { "content" => "user prefers dark mode" } }],
-        [{ type: "tool_use", id: "t2", name: "done", input: { "result" => "remembered" } }]
-      )
-
-      b = binding
-      Mana::Engine.run("remember that I prefer dark mode", b)
-
-      memory = Mana.memory
-      expect(memory.long_term.size).to eq(1)
-      expect(memory.long_term.first[:content]).to eq("user prefers dark mode")
-    end
-  end
+  # remember tool integration tests moved to claw specs
+  # (remember is now a registered tool from claw, not built into mana)
 end

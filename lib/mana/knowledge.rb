@@ -119,25 +119,13 @@ module Mana
       end
 
       def memory
-        store_class = Mana.config.memory_store&.class&.name || "Mana::FileStore (default)"
-        path = if Mana.config.memory_path
-                 Mana.config.memory_path
-               else
-                 "~/.mana/memory/<namespace>.json"
-               end
-
         <<~TEXT
-          ruby-mana has two types of memory:
-          - Short-term memory: conversation history within the current process. Each ~"..."
+          ruby-mana manages conversation context via Mana::Context:
+          - Short-term context: conversation history within the current process. Each ~"..."
             call appends to it, so consecutive calls share context. Cleared when the process exits.
-          - Long-term memory: persistent facts stored on disk as JSON files.
-            Default path: #{path}
-            Current store: #{store_class}
-            Namespace is auto-detected from the git repo name, Gemfile directory, or cwd.
-            Configurable via: Mana.configure { |c| c.memory_path = "/custom/path" }
-            Or provide a custom MemoryStore subclass for Redis, DB, etc.
-          - Incognito mode: Mana.incognito { ~"..." } disables all memory.
-          The LLM can store facts via the `remember` tool. These persist across script executions.
+          - Summaries: compacted conversation summaries from prior rounds.
+          Long-term memory and the `remember` tool are provided by agent frameworks (e.g. ruby-claw)
+          via Mana's tool registration interface.
         TEXT
       end
 

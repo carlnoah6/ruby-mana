@@ -229,7 +229,7 @@ Mana.configure do |c|
   c.context_window = 128_000      # default: 128_000
   c.memory_store = Mana::FileStore.new  # default file-based persistence
   c.memory_path = ".mana"         # directory for memory files
-  c.memory_class = nil            # custom memory class
+  c.context_class = nil           # custom context class (e.g. from agent frameworks)
   c.knowledge_provider = nil      # custom knowledge provider
 end
 ```
